@@ -8,7 +8,7 @@ uvicorn[standard]==0.24.0
 sqlalchemy==2.0.23
 asyncpg==0.29.0
 psycopg2-binary==2.9.9
-alembic==1.12.1
+alembic==1.13.0
 
 # Redis for rate limiting
 redis==5.0.1

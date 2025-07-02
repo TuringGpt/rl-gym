@@ -46,5 +46,8 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 # Expose port
 EXPOSE ${AMAZON_SERVICE_PORT:-8001}
 
-# Run the application
-CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
+# Copy startup script with executable permissions
+COPY --chmod=755 startup.sh /app/startup.sh
+
+# Run migrations and start the application
+CMD ["/app/startup.sh"]
