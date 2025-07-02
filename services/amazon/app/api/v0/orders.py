@@ -47,18 +47,14 @@ async def get_orders(
     EarliestDeliveryDateBefore: Optional[str] = Query(None, description="Earliest delivery date before"),
     EarliestDeliveryDateAfter: Optional[str] = Query(None, description="Earliest delivery date after"),
     LatestDeliveryDateBefore: Optional[str] = Query(None, description="Latest delivery date before"),
-    LatestDeliveryDateAfter: Optional[str] = Query(None, description="Latest delivery date after"),
-    current_user: dict = Depends(require_amazon_scopes(["sellingpartnerapi::orders"]))
+    LatestDeliveryDateAfter: Optional[str] = Query(None, description="Latest delivery date after")
 ):
     """
     Get orders.
     
-    Returns orders created or updated during the time frame that you specify. 
+    Returns orders created or updated during the time frame that you specify.
     You can choose to get orders that are in any one of multiple order statuses.
     """
-    
-    # Check rate limits
-    await check_amazon_rate_limit(request)
     
     # Parse filters
     filters = {}
@@ -122,17 +118,13 @@ async def get_orders(
 async def get_order(
     orderId: str,
     request: Request,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(require_amazon_scopes(["sellingpartnerapi::orders"]))
+    db: Session = Depends(get_db)
 ):
     """
     Get order details.
     
     Returns the order that you specify.
     """
-    
-    # Check rate limits
-    await check_amazon_rate_limit(request)
     
     # Get order from service
     order_service = OrderService(db)
@@ -158,17 +150,13 @@ async def get_order_items(
     request: Request,
     db: Session = Depends(get_db),
     NextToken: Optional[str] = Query(None, description="Next token for pagination"),
-    MaxResultsPerPage: Optional[int] = Query(100, ge=1, le=100, description="Maximum results per page"),
-    current_user: dict = Depends(require_amazon_scopes(["sellingpartnerapi::orders"]))
+    MaxResultsPerPage: Optional[int] = Query(100, ge=1, le=100, description="Maximum results per page")
 ):
     """
     Get order items.
     
     Returns detailed order item information for the order that you specify.
     """
-    
-    # Check rate limits
-    await check_amazon_rate_limit(request)
     
     # Get order items from service
     order_service = OrderService(db)
@@ -198,17 +186,13 @@ async def get_order_items(
 async def get_order_buyer_info(
     orderId: str,
     request: Request,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(require_amazon_scopes(["sellingpartnerapi::orders"]))
+    db: Session = Depends(get_db)
 ):
     """
     Get buyer information.
     
     Returns buyer information for the order that you specify.
     """
-    
-    # Check rate limits
-    await check_amazon_rate_limit(request)
     
     # Get buyer info from service
     order_service = OrderService(db)
@@ -238,17 +222,13 @@ async def get_order_buyer_info(
 async def get_order_address(
     orderId: str,
     request: Request,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(require_amazon_scopes(["sellingpartnerapi::orders"]))
+    db: Session = Depends(get_db)
 ):
     """
     Get shipping address.
     
     Returns the shipping address for the order that you specify.
     """
-    
-    # Check rate limits
-    await check_amazon_rate_limit(request)
     
     # Get shipping address from service
     order_service = OrderService(db)
@@ -274,17 +254,13 @@ async def get_order_address(
 async def get_order_regulated_info(
     orderId: str,
     request: Request,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(require_amazon_scopes(["sellingpartnerapi::orders"]))
+    db: Session = Depends(get_db)
 ):
     """
     Get regulated information.
     
     Returns regulated information for the order that you specify.
     """
-    
-    # Check rate limits
-    await check_amazon_rate_limit(request)
     
     # Get regulated info from service
     order_service = OrderService(db)
@@ -312,17 +288,13 @@ async def update_shipment_status(
     orderId: str,
     request: Request,
     shipment_data: dict,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(require_amazon_scopes(["sellingpartnerapi::orders"]))
+    db: Session = Depends(get_db)
 ):
     """
     Update shipment status.
     
     Updates (confirms) the status of the specified order.
     """
-    
-    # Check rate limits
-    await check_amazon_rate_limit(request)
     
     # Update shipment status via service
     order_service = OrderService(db)
@@ -348,17 +320,13 @@ async def update_shipment_status(
 async def confirm_order(
     orderId: str,
     request: Request,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(require_amazon_scopes(["sellingpartnerapi::orders"]))
+    db: Session = Depends(get_db)
 ):
     """
     Confirm order.
     
     Updates the acknowledgment status of the specified order.
     """
-    
-    # Check rate limits
-    await check_amazon_rate_limit(request)
     
     # Confirm order via service
     order_service = OrderService(db)

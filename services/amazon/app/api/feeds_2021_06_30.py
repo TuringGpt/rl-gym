@@ -25,11 +25,9 @@ router = APIRouter()
 async def create_feed(
     request: Request,
     feed_data: dict,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(require_amazon_scopes(["sellingpartnerapi::feeds"]))
+    db: Session = Depends(get_db)
 ):
     """Create a feed."""
-    await check_amazon_rate_limit(request)
     
     # Mock feed creation
     feed_id = f"feed_{int(request.headers.get('x-request-id', '12345')[-5:])}"
@@ -53,11 +51,9 @@ async def get_feeds(
     processingStatuses: Optional[str] = Query(None),
     createdSince: Optional[str] = Query(None),
     createdUntil: Optional[str] = Query(None),
-    nextToken: Optional[str] = Query(None),
-    current_user: dict = Depends(require_amazon_scopes(["sellingpartnerapi::feeds"]))
+    nextToken: Optional[str] = Query(None)
 ):
     """Get feeds."""
-    await check_amazon_rate_limit(request)
     
     # Mock feeds response
     return {
@@ -78,11 +74,9 @@ async def get_feeds(
 async def get_feed(
     feedId: str,
     request: Request,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(require_amazon_scopes(["sellingpartnerapi::feeds"]))
+    db: Session = Depends(get_db)
 ):
     """Get feed details."""
-    await check_amazon_rate_limit(request)
     
     return {
         "payload": {
@@ -99,11 +93,9 @@ async def get_feed(
 async def cancel_feed(
     feedId: str,
     request: Request,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(require_amazon_scopes(["sellingpartnerapi::feeds"]))
+    db: Session = Depends(get_db)
 ):
     """Cancel feed."""
-    await check_amazon_rate_limit(request)
     
     return {
         "payload": {

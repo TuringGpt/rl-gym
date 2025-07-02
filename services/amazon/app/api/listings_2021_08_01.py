@@ -31,11 +31,9 @@ async def put_listings_item(
     sku: str = FastAPIPath(..., description="SKU"),
     db: Session = Depends(get_db),
     marketplaceIds: str = None,
-    issueLocale: Optional[str] = None,
-    current_user: dict = Depends(require_amazon_scopes(["sellingpartnerapi::listings"]))
+    issueLocale: Optional[str] = None
 ):
     """Create or update a listing."""
-    await check_amazon_rate_limit(request)
     
     listing_service = ListingService(db)
     result = await listing_service.create_or_update_listing(
@@ -56,11 +54,9 @@ async def get_listings_item(
     db: Session = Depends(get_db),
     marketplaceIds: str = None,
     includedData: Optional[str] = None,
-    issueLocale: Optional[str] = None,
-    current_user: dict = Depends(require_amazon_scopes(["sellingpartnerapi::listings"]))
+    issueLocale: Optional[str] = None
 ):
     """Get listing details."""
-    await check_amazon_rate_limit(request)
     
     listing_service = ListingService(db)
     listing = await listing_service.get_listing(
@@ -92,11 +88,9 @@ async def delete_listings_item(
     sku: str = FastAPIPath(..., description="SKU"),
     db: Session = Depends(get_db),
     marketplaceIds: str = None,
-    issueLocale: Optional[str] = None,
-    current_user: dict = Depends(require_amazon_scopes(["sellingpartnerapi::listings"]))
+    issueLocale: Optional[str] = None
 ):
     """Delete a listing."""
-    await check_amazon_rate_limit(request)
     
     listing_service = ListingService(db)
     result = await listing_service.delete_listing(

@@ -9,7 +9,7 @@ import logging
 from pathlib import Path
 
 # Add shared directory to Python path
-shared_path = Path(__file__).parent.parent.parent / "shared"
+shared_path = Path(__file__).parent / "shared"
 sys.path.insert(0, str(shared_path))
 
 from fastapi import FastAPI, Request, HTTPException
@@ -28,7 +28,14 @@ from utils.auth import create_mock_token_endpoint, amazon_auth
 # Import Amazon-specific modules
 from app.database.connection import db_manager
 from app.api.v0 import orders, reports
-from app.api import listings_2021_08_01, feeds_2021_06_30
+from app.api import (
+    listings_2021_08_01,
+    feeds_2021_06_30,
+    fba_inventory_2020_12_01,
+    catalog_items_2022_04_01,
+    product_pricing_v0,
+    finances_v0
+)
 from app.models import *  # Import all models to register them
 
 # Configure logging
@@ -68,27 +75,79 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Amazon Selling Partner API Mock",
     description="""
-    Mock implementation of Amazon Selling Partner API for training language models.
+    # 🚀 Amazon SP-API Mock - Complete Implementation
     
-    This service provides realistic API endpoints matching the actual Amazon SP-API:
-    - Orders API (v0)
-    - Listings API (2021-08-01)
-    - Inventory API (v1)  
-    - Reports API (2021-06-30)
-    - Feeds API (2021-06-30)
+    A comprehensive mock implementation of Amazon Selling Partner API designed for training language models
+    and testing API integrations without requiring actual Amazon credentials.
     
-    Features:
-    - Authentic request/response patterns
-    - Realistic mock data with proper relationships
-    - Rate limiting matching Amazon's constraints
-    - Proper authentication simulation
-    - Error responses matching real API behavior
+    ## 📊 Available API Collections
+    
+    ### 🛒 **Orders API (v0)**
+    Complete order management with realistic order data, buyer information, and order items.
+    
+    ### 📦 **FBA Inventory API (2020-12-01)**
+    Comprehensive inventory management with quantity tracking, conditions, and detailed breakdowns.
+    
+    ### 📝 **Listings API (2021-08-01)**
+    Product listing management with SKU operations, attributes, and status tracking.
+    
+    ### 📊 **Reports API (2021-06-30)**
+    Report generation and retrieval system with various report types and processing status.
+    
+    ### 📤 **Feeds API (2021-06-30)**
+    Data feed processing and submission with document handling and status tracking.
+    
+    ### 🔍 **Catalog Items API (2022-04-01)**
+    Product catalog search with detailed item information, images, and metadata.
+    
+    ### 💰 **Product Pricing API (v0)**
+    Competitive pricing data with offer management and pricing comparisons.
+    
+    ### 💳 **Finances API (v0)**
+    Financial events and settlement information with detailed transaction data.
+    
+    ## ✨ Key Features
+    
+    - ✅ **No Authentication Required** - All endpoints accessible without tokens for easy testing
+    - ✅ **Realistic Mock Data** - Pre-populated with 50+ interconnected records across all APIs
+    - ✅ **Production-Ready Architecture** - Proper error handling, logging, and response patterns
+    - ✅ **Complete Database** - Alembic migrations with comprehensive schema covering all SP-API entities
+    - ✅ **Interactive Testing** - Use this Swagger UI to test all endpoints directly
+    
+    ## 🎯 Perfect for:
+    - **Language Model Training** on realistic API patterns
+    - **Integration Testing** without Amazon credentials
+    - **Learning Amazon SP-API** structure and responses
+    - **Prototyping** e-commerce applications
+    
+    ## 🚀 Quick Start
+    1. All endpoints are ready to use - no authentication required
+    2. Click on any endpoint below to expand and test it
+    3. Use the "Try it out" button to make real API calls
+    4. Explore the realistic response data and structures
+    
+    ---
+    *This is a mock service for development and training purposes only.*
     """,
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
-    lifespan=lifespan
+    lifespan=lifespan,
+    contact={
+        "name": "API Mock Gym",
+        "url": "https://github.com/your-repo/api-mock-gym",
+    },
+    license_info={
+        "name": "MIT License",
+        "url": "https://opensource.org/licenses/MIT",
+    },
+    servers=[
+        {
+            "url": "http://localhost:8001",
+            "description": "Local development server"
+        }
+    ]
 )
 
 # Middleware configuration
@@ -102,9 +161,9 @@ app.add_middleware(
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# Add rate limiting middleware
-rate_limit_middleware = create_rate_limit_middleware("amazon")
-app.middleware("http")(rate_limit_middleware)
+# Rate limiting disabled for easy testing
+# rate_limit_middleware = create_rate_limit_middleware("amazon")
+# app.middleware("http")(rate_limit_middleware)
 
 # Add exception handlers
 exception_handlers = create_exception_handlers(amazon_formatter)
@@ -146,79 +205,10 @@ app.include_router(orders.router, prefix="/orders/v0", tags=["Orders"])
 app.include_router(reports.router, prefix="/reports/2021-06-30", tags=["Reports"])
 app.include_router(listings_2021_08_01.router, prefix="/listings/2021-08-01", tags=["Listings"])
 app.include_router(feeds_2021_06_30.router, prefix="/feeds/2021-06-30", tags=["Feeds"])
-
-# Inventory endpoints (inline for simplicity)
-@app.get("/fba/inventory/v1/summaries", tags=["Inventory"])
-async def get_inventory_summaries(
-    request: Request,
-    granularityType: str = "Marketplace",
-    granularityId: str = "ATVPDKIKX0DER",
-    marketplaceIds: str = "ATVPDKIKX0DER",
-    details: bool = False,
-    startDateTime: str = None,
-    sellerSkus: str = None,
-    nextToken: str = None,
-    maxResults: int = 50
-):
-    """Get inventory summaries."""
-    from app.services.inventory_service import InventoryService
-    from utils.auth import get_amazon_user
-    
-    # Verify authentication
-    current_user = get_amazon_user(request.headers.get("authorization", "").replace("Bearer ", ""))
-    
-    service = InventoryService()
-    
-    filters = {}
-    if sellerSkus:
-        filters["seller_skus"] = sellerSkus.split(",")
-    if startDateTime:
-        filters["start_date"] = startDateTime
-    
-    result = await service.get_inventory_summaries(
-        marketplace_ids=marketplaceIds.split(","),
-        filters=filters,
-        next_token=nextToken,
-        max_results=maxResults
-    )
-    
-    return amazon_formatter.inventory_response(
-        result["summaries"],
-        result.get("next_token")
-    )
-
-@app.get("/fba/inventory/v1/details", tags=["Inventory"])
-async def get_inventory_details(
-    request: Request,
-    marketplaceIds: str = "ATVPDKIKX0DER",
-    sellerSkus: str = None,
-    nextToken: str = None,
-    maxResults: int = 50
-):
-    """Get detailed inventory information."""
-    from app.services.inventory_service import InventoryService
-    from utils.auth import get_amazon_user
-    
-    # Verify authentication
-    current_user = get_amazon_user(request.headers.get("authorization", "").replace("Bearer ", ""))
-    
-    service = InventoryService()
-    
-    filters = {}
-    if sellerSkus:
-        filters["seller_skus"] = sellerSkus.split(",")
-    
-    result = await service.get_inventory_details(
-        marketplace_ids=marketplaceIds.split(","),
-        filters=filters,
-        next_token=nextToken,
-        max_results=max_results
-    )
-    
-    return amazon_formatter.inventory_response(
-        result["details"],
-        result.get("next_token")
-    )
+app.include_router(fba_inventory_2020_12_01.router, tags=["FBA Inventory"])
+app.include_router(catalog_items_2022_04_01.router, tags=["Catalog Items"])
+app.include_router(product_pricing_v0.router, tags=["Product Pricing"])
+app.include_router(finances_v0.router, tags=["Finances"])
 
 # Admin endpoints for data generation (development only)
 if os.getenv("ENVIRONMENT") == "development":
@@ -270,10 +260,13 @@ async def root():
         "health": "/health",
         "endpoints": {
             "orders": "/orders/v0",
-            "inventory": "/fba/inventory/v1",
+            "fba_inventory": "/fba/inventory/v1",
             "listings": "/listings/2021-08-01",
             "reports": "/reports/2021-06-30",
-            "feeds": "/feeds/2021-06-30"
+            "feeds": "/feeds/2021-06-30",
+            "catalog_items": "/catalog/2022-04-01",
+            "product_pricing": "/products/pricing/v0",
+            "finances": "/finances/v0"
         },
         "authentication": "/auth/oauth/token"
     }

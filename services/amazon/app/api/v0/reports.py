@@ -28,17 +28,13 @@ router = APIRouter()
 async def create_report(
     request: Request,
     report_request: ReportRequest,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(require_amazon_scopes(["sellingpartnerapi::reports"]))
+    db: Session = Depends(get_db)
 ):
     """
     Create a report.
     
     Creates a report of the type that you specify.
     """
-    
-    # Check rate limits
-    await check_amazon_rate_limit(request)
     
     # Create report via service
     report_service = ReportService(db)
@@ -63,17 +59,13 @@ async def get_reports(
     pageSize: Optional[int] = Query(10, ge=1, le=100, description="Number of reports to return"),
     createdSince: Optional[str] = Query(None, description="Earliest report creation date"),
     createdUntil: Optional[str] = Query(None, description="Latest report creation date"),
-    nextToken: Optional[str] = Query(None, description="Next token for pagination"),
-    current_user: dict = Depends(require_amazon_scopes(["sellingpartnerapi::reports"]))
+    nextToken: Optional[str] = Query(None, description="Next token for pagination")
 ):
     """
     Get reports.
     
     Returns report details (including the reportDocumentId, if available) for the reports that match the filters that you specify.
     """
-    
-    # Check rate limits
-    await check_amazon_rate_limit(request)
     
     # Parse filters
     filters = {}
@@ -109,17 +101,13 @@ async def get_reports(
 async def get_report(
     reportId: str,
     request: Request,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(require_amazon_scopes(["sellingpartnerapi::reports"]))
+    db: Session = Depends(get_db)
 ):
     """
     Get report.
     
     Returns report details for the report that you specify.
     """
-    
-    # Check rate limits
-    await check_amazon_rate_limit(request)
     
     # Get report from service
     report_service = ReportService(db)
@@ -141,17 +129,13 @@ async def get_report(
 async def cancel_report(
     reportId: str,
     request: Request,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(require_amazon_scopes(["sellingpartnerapi::reports"]))
+    db: Session = Depends(get_db)
 ):
     """
     Cancel report.
     
     Cancels the report that you specify. Only reports with processingStatus=IN_QUEUE can be cancelled.
     """
-    
-    # Check rate limits
-    await check_amazon_rate_limit(request)
     
     # Cancel report via service
     report_service = ReportService(db)
@@ -177,17 +161,13 @@ async def cancel_report(
 async def get_report_document(
     reportDocumentId: str,
     request: Request,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(require_amazon_scopes(["sellingpartnerapi::reports"]))
+    db: Session = Depends(get_db)
 ):
     """
     Get report document.
     
     Returns the information required for retrieving a report document's contents.
     """
-    
-    # Check rate limits
-    await check_amazon_rate_limit(request)
     
     # Get report document from service
     report_service = ReportService(db)
@@ -216,17 +196,13 @@ async def get_report_document(
 async def create_report_schedule(
     request: Request,
     schedule_request: dict,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(require_amazon_scopes(["sellingpartnerapi::reports"]))
+    db: Session = Depends(get_db)
 ):
     """
     Create report schedule.
     
     Creates a report schedule of the type that you specify.
     """
-    
-    # Check rate limits
-    await check_amazon_rate_limit(request)
     
     # Create report schedule via service
     report_service = ReportService(db)
