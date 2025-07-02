@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  # Redis for rate limiting and caching
+  redis:
+    image: redis:7-alpine
+    container_name: api-mock-gym-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis123}
+    volumes:
+      - redis_data:/data
+    networks:
+      - api-mock-gym-network
+    restart: unless-stopped
+
+  # Amazon Selling Partner API Database
+  amazon-db:
+    image: postgres:15-alpine
+    container_name: api-mock-gym-amazon-db
+    environment:
+      POSTGRES_DB: amazon_sp_db
+      POSTGRES_USER: amazon_user
+      POSTGRES_PASSWORD: ${AMAZON_DB_PASSWORD:-amazon123}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - amazon_db_data:/var/lib/postgresql/data
+      - ./services/amazon/feed_data.sql:/docker-entrypoint-initdb.d/01-feed_data.sql:ro
+    networks:
+      - api-mock-gym-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U amazon_user -d amazon_sp_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Amazon Selling Partner API Mock Service
+  amazon-api:
+    build:
+      context: ./services/amazon
+      dockerfile: Dockerfile
+    container_name: api-mock-gym-amazon
+    environment:
+      DATABASE_URL: postgresql://amazon_user:${AMAZON_DB_PASSWORD:-amazon123}@amazon-db:5432/amazon_sp_db
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis123}@redis:6379/0
+      AMAZON_SERVICE_PORT: 8001
+      LWA_CLIENT_ID: ${LWA_CLIENT_ID:-mock-client-id}
+      LWA_CLIENT_SECRET: ${LWA_CLIENT_SECRET:-mock-client-secret}
+      RATE_LIMIT_REQUESTS: ${RATE_LIMIT_REQUESTS:-100}
+      RATE_LIMIT_WINDOW: ${RATE_LIMIT_WINDOW:-60}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./shared:/app/shared:ro
+    networks:
+      - api-mock-gym-network
+    depends_on:
+      amazon-db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # pgAdmin for database management (development only)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: api-mock-gym-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - api-mock-gym-network
+    depends_on:
+      - amazon-db
+    restart: unless-stopped
+    profiles:
+      - dev
+      - development
+
+volumes:
+  redis_data:
+    driver: local
+  amazon_db_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  api-mock-gym-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
