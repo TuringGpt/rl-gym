@@ -409,3 +409,554 @@ async def get_item_offers(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# Batch request models
+class BatchRequest(BaseModel):
+    method: str = "GET"
+    marketplace_id: str = Field(..., alias="MarketplaceId")
+    item_condition: str = Field(..., alias="ItemCondition")
+    customer_type: Optional[str] = Field("Consumer", alias="CustomerType")
+    asin: Optional[str] = Field(None, alias="Asin")
+    seller_sku: Optional[str] = Field(None, alias="SellerSKU")
+
+class BatchRequestContainer(BaseModel):
+    requests: List[BatchRequest]
+
+class BatchResponse(BaseModel):
+    headers: Dict[str, str]
+    status: Dict[str, Any]
+    body: Dict[str, Any]
+    request: Dict[str, Any]
+
+class BatchResponseContainer(BaseModel):
+    responses: List[BatchResponse]
+
+@router.post("/batches/products/pricing/v0/itemOffers", response_model=BatchResponseContainer)
+async def get_item_offers_batch(
+    request: BatchRequestContainer,
+    db: Session = Depends(get_db)
+):
+    """
+    Returns the lowest priced offers for a batch of items based on ASIN.
+    """
+    try:
+        responses = []
+        
+        for req in request.requests:
+            try:
+                if not req.asin:
+                    # Missing ASIN
+                    response = BatchResponse(
+                        headers={"Date": datetime.utcnow().isoformat(), "x-amzn-RequestId": f"batch-{hash(str(req))}"},
+                        status={"statusCode": 400, "reasonPhrase": "Bad Request"},
+                        body={
+                            "errors": [
+                                {
+                                    "code": "InvalidInput",
+                                    "message": "ASIN is required for item offers batch request",
+                                    "details": ""
+                                }
+                            ]
+                        },
+                        request={
+                            "MarketplaceId": req.marketplace_id,
+                            "ItemCondition": req.item_condition,
+                            "CustomerType": req.customer_type,
+                            "Asin": req.asin
+                        }
+                    )
+                    responses.append(response)
+                    continue
+                
+                # Get item offers for this ASIN
+                pricing_records = db.query(ProductPricing).filter(
+                    ProductPricing.asin == req.asin,
+                    ProductPricing.marketplace_id == req.marketplace_id,
+                    ProductPricing.item_condition == req.item_condition
+                ).all()
+                
+                if not pricing_records:
+                    # ASIN not found
+                    response = BatchResponse(
+                        headers={"Date": datetime.utcnow().isoformat(), "x-amzn-RequestId": f"batch-{hash(str(req))}"},
+                        status={"statusCode": 404, "reasonPhrase": "Not Found"},
+                        body={
+                            "errors": [
+                                {
+                                    "code": "InvalidASIN",
+                                    "message": f"The ASIN '{req.asin}' was not found.",
+                                    "details": ""
+                                }
+                            ]
+                        },
+                        request={
+                            "MarketplaceId": req.marketplace_id,
+                            "ItemCondition": req.item_condition,
+                            "CustomerType": req.customer_type,
+                            "Asin": req.asin
+                        }
+                    )
+                    responses.append(response)
+                    continue
+                
+                # Use the first record for summary data
+                main_record = pricing_records[0]
+                
+                # Build offers similar to get_item_offers
+                offers = []
+                for record in pricing_records:
+                    offers.append({
+                        "MyOffer": record == main_record,
+                        "offerType": "B2C",
+                        "SubCondition": "new",
+                        "SellerId": f"SELLER_{record.seller_sku[:5]}",
+                        "ConditionNotes": "",
+                        "SellerFeedbackRating": {
+                            "SellerPositiveFeedbackRating": 95.0 + (hash(record.seller_sku) % 5),
+                            "FeedbackCount": 500 + (hash(record.seller_sku) % 1000)
+                        },
+                        "ShippingTime": {
+                            "minimumHours": 24,
+                            "maximumHours": 48,
+                            "availableDate": datetime.utcnow().date().isoformat(),
+                            "availabilityType": "NOW"
+                        },
+                        "ListingPrice": {
+                            "CurrencyCode": "USD",
+                            "Amount": float(record.listing_price)
+                        },
+                        "Shipping": {
+                            "CurrencyCode": "USD",
+                            "Amount": float(record.shipping_price) if record.shipping_price else 0.0
+                        },
+                        "ShipsFrom": {
+                            "State": "WA",
+                            "Country": "US"
+                        },
+                        "IsFulfilledByAmazon": True,
+                        "PrimeInformation": {
+                            "IsPrime": True,
+                            "IsNationalPrime": True
+                        },
+                        "IsBuyBoxWinner": record == main_record,
+                        "IsFeaturedMerchant": record == main_record
+                    })
+                
+                payload = {
+                    "MarketplaceID": req.marketplace_id,
+                    "ASIN": req.asin,
+                    "SKU": main_record.seller_sku,
+                    "ItemCondition": req.item_condition,
+                    "status": "Success",
+                    "Identifier": {
+                        "MarketplaceId": req.marketplace_id,
+                        "ASIN": req.asin,
+                        "SellerSKU": main_record.seller_sku,
+                        "ItemCondition": req.item_condition
+                    },
+                    "Summary": {
+                        "TotalOfferCount": len(offers),
+                        "NumberOfOffers": [
+                            {
+                                "condition": req.item_condition,
+                                "fulfillmentChannel": "Amazon",
+                                "OfferCount": len(offers)
+                            }
+                        ],
+                        "LowestPrices": [
+                            {
+                                "condition": req.item_condition,
+                                "fulfillmentChannel": "Amazon",
+                                "offerType": "B2C",
+                                "quantityTier": 1,
+                                "quantityDiscountType": "QUANTITY_DISCOUNT",
+                                "LandedPrice": {
+                                    "CurrencyCode": "USD",
+                                    "Amount": float(main_record.landed_price) if main_record.landed_price else float(main_record.listing_price)
+                                },
+                                "ListingPrice": {
+                                    "CurrencyCode": "USD",
+                                    "Amount": float(main_record.listing_price)
+                                },
+                                "Shipping": {
+                                    "CurrencyCode": "USD",
+                                    "Amount": float(main_record.shipping_price) if main_record.shipping_price else 0.0
+                                },
+                                "Points": {
+                                    "PointsNumber": main_record.points_value or 0,
+                                    "PointsMonetaryValue": {
+                                        "CurrencyCode": "USD",
+                                        "Amount": (main_record.points_value or 0) * 0.01
+                                    }
+                                }
+                            }
+                        ],
+                        "BuyBoxPrices": [
+                            {
+                                "condition": req.item_condition,
+                                "offerType": "B2C",
+                                "quantityTier": 1,
+                                "quantityDiscountType": "QUANTITY_DISCOUNT",
+                                "LandedPrice": {
+                                    "CurrencyCode": "USD",
+                                    "Amount": float(main_record.landed_price) if main_record.landed_price else float(main_record.listing_price)
+                                },
+                                "ListingPrice": {
+                                    "CurrencyCode": "USD",
+                                    "Amount": float(main_record.listing_price)
+                                },
+                                "Shipping": {
+                                    "CurrencyCode": "USD",
+                                    "Amount": float(main_record.shipping_price) if main_record.shipping_price else 0.0
+                                },
+                                "Points": {
+                                    "PointsNumber": main_record.points_value or 0,
+                                    "PointsMonetaryValue": {
+                                        "CurrencyCode": "USD",
+                                        "Amount": (main_record.points_value or 0) * 0.01
+                                    }
+                                },
+                                "sellerId": f"SELLER_{main_record.seller_sku[:5]}"
+                            }
+                        ],
+                        "ListPrice": {
+                            "CurrencyCode": "USD",
+                            "Amount": float(main_record.listing_price) * 1.2  # Mock list price
+                        },
+                        "CompetitivePriceThreshold": {
+                            "CurrencyCode": "USD",
+                            "Amount": float(main_record.listing_price) * 0.95
+                        },
+                        "SuggestedLowerPricePlusShipping": {
+                            "CurrencyCode": "USD",
+                            "Amount": float(main_record.listing_price) * 0.9
+                        },
+                        "SalesRankings": [
+                            {
+                                "ProductCategoryId": "electronics",
+                                "Rank": 1000 + hash(req.asin) % 9000
+                            }
+                        ],
+                        "BuyBoxEligibleOffers": [
+                            {
+                                "condition": req.item_condition,
+                                "fulfillmentChannel": "Amazon",
+                                "OfferCount": len(offers)
+                            }
+                        ],
+                        "OffersAvailableTime": datetime.utcnow().isoformat()
+                    },
+                    "Offers": offers
+                }
+                
+                response = BatchResponse(
+                    headers={"Date": datetime.utcnow().isoformat(), "x-amzn-RequestId": f"batch-{hash(str(req))}"},
+                    status={"statusCode": 200, "reasonPhrase": "OK"},
+                    body={"payload": payload},
+                    request={
+                        "MarketplaceId": req.marketplace_id,
+                        "ItemCondition": req.item_condition,
+                        "CustomerType": req.customer_type,
+                        "Asin": req.asin
+                    }
+                )
+                responses.append(response)
+                
+            except Exception as e:
+                # Handle individual request errors
+                response = BatchResponse(
+                    headers={"Date": datetime.utcnow().isoformat(), "x-amzn-RequestId": f"batch-{hash(str(req))}"},
+                    status={"statusCode": 500, "reasonPhrase": "Internal Server Error"},
+                    body={
+                        "errors": [
+                            {
+                                "code": "InternalError",
+                                "message": str(e),
+                                "details": ""
+                            }
+                        ]
+                    },
+                    request={
+                        "MarketplaceId": req.marketplace_id,
+                        "ItemCondition": req.item_condition,
+                        "CustomerType": req.customer_type,
+                        "Asin": req.asin
+                    }
+                )
+                responses.append(response)
+        
+        return BatchResponseContainer(responses=responses)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/batches/products/pricing/v0/listingOffers", response_model=BatchResponseContainer)
+async def get_listing_offers_batch(
+    request: BatchRequestContainer,
+    db: Session = Depends(get_db)
+):
+    """
+    Returns the lowest priced offers for a batch of SKU listings.
+    """
+    try:
+        responses = []
+        
+        for req in request.requests:
+            try:
+                if not req.seller_sku:
+                    # Missing SKU
+                    response = BatchResponse(
+                        headers={"Date": datetime.utcnow().isoformat(), "x-amzn-RequestId": f"batch-{hash(str(req))}"},
+                        status={"statusCode": 400, "reasonPhrase": "Bad Request"},
+                        body={
+                            "errors": [
+                                {
+                                    "code": "InvalidInput",
+                                    "message": "SellerSKU is required for listing offers batch request",
+                                    "details": ""
+                                }
+                            ]
+                        },
+                        request={
+                            "MarketplaceId": req.marketplace_id,
+                            "ItemCondition": req.item_condition,
+                            "CustomerType": req.customer_type,
+                            "SellerSKU": req.seller_sku
+                        }
+                    )
+                    responses.append(response)
+                    continue
+                
+                # Get listing offers for this SKU
+                pricing_record = db.query(ProductPricing).filter(
+                    ProductPricing.seller_sku == req.seller_sku,
+                    ProductPricing.marketplace_id == req.marketplace_id,
+                    ProductPricing.item_condition == req.item_condition
+                ).first()
+                
+                if not pricing_record:
+                    # SKU not found
+                    response = BatchResponse(
+                        headers={"Date": datetime.utcnow().isoformat(), "x-amzn-RequestId": f"batch-{hash(str(req))}"},
+                        status={"statusCode": 404, "reasonPhrase": "Not Found"},
+                        body={
+                            "errors": [
+                                {
+                                    "code": "InvalidSKU",
+                                    "message": f"The SKU '{req.seller_sku}' was not found.",
+                                    "details": ""
+                                }
+                            ]
+                        },
+                        request={
+                            "MarketplaceId": req.marketplace_id,
+                            "ItemCondition": req.item_condition,
+                            "CustomerType": req.customer_type,
+                            "SellerSKU": req.seller_sku
+                        }
+                    )
+                    responses.append(response)
+                    continue
+                
+                # Build similar response to get_listing_offers
+                payload = {
+                    "MarketplaceID": req.marketplace_id,
+                    "ASIN": pricing_record.asin,
+                    "SKU": req.seller_sku,
+                    "ItemCondition": req.item_condition,
+                    "status": "Success",
+                    "Identifier": {
+                        "MarketplaceId": req.marketplace_id,
+                        "ASIN": pricing_record.asin,
+                        "SellerSKU": req.seller_sku,
+                        "ItemCondition": req.item_condition
+                    },
+                    "Summary": {
+                        "TotalOfferCount": pricing_record.number_of_offer_listings or 1,
+                        "NumberOfOffers": [
+                            {
+                                "condition": req.item_condition,
+                                "fulfillmentChannel": "Amazon",
+                                "OfferCount": pricing_record.number_of_offer_listings or 1
+                            }
+                        ],
+                        "LowestPrices": [
+                            {
+                                "condition": req.item_condition,
+                                "fulfillmentChannel": "Amazon",
+                                "offerType": "B2C",
+                                "quantityTier": 1,
+                                "quantityDiscountType": "QUANTITY_DISCOUNT",
+                                "LandedPrice": {
+                                    "CurrencyCode": "USD",
+                                    "Amount": float(pricing_record.landed_price) if pricing_record.landed_price else float(pricing_record.listing_price)
+                                },
+                                "ListingPrice": {
+                                    "CurrencyCode": "USD",
+                                    "Amount": float(pricing_record.listing_price)
+                                },
+                                "Shipping": {
+                                    "CurrencyCode": "USD",
+                                    "Amount": float(pricing_record.shipping_price) if pricing_record.shipping_price else 0.0
+                                },
+                                "Points": {
+                                    "PointsNumber": pricing_record.points_value or 0,
+                                    "PointsMonetaryValue": {
+                                        "CurrencyCode": "USD",
+                                        "Amount": (pricing_record.points_value or 0) * 0.01
+                                    }
+                                }
+                            }
+                        ],
+                        "BuyBoxPrices": [
+                            {
+                                "condition": req.item_condition,
+                                "offerType": "B2C",
+                                "quantityTier": 1,
+                                "quantityDiscountType": "QUANTITY_DISCOUNT",
+                                "LandedPrice": {
+                                    "CurrencyCode": "USD",
+                                    "Amount": float(pricing_record.landed_price) if pricing_record.landed_price else float(pricing_record.listing_price)
+                                },
+                                "ListingPrice": {
+                                    "CurrencyCode": "USD",
+                                    "Amount": float(pricing_record.listing_price)
+                                },
+                                "Shipping": {
+                                    "CurrencyCode": "USD",
+                                    "Amount": float(pricing_record.shipping_price) if pricing_record.shipping_price else 0.0
+                                },
+                                "Points": {
+                                    "PointsNumber": pricing_record.points_value or 0,
+                                    "PointsMonetaryValue": {
+                                        "CurrencyCode": "USD",
+                                        "Amount": (pricing_record.points_value or 0) * 0.01
+                                    }
+                                },
+                                "sellerId": "TEST_SELLER"
+                            }
+                        ],
+                        "ListPrice": {
+                            "CurrencyCode": "USD",
+                            "Amount": float(pricing_record.listing_price) * 1.2
+                        },
+                        "CompetitivePriceThreshold": {
+                            "CurrencyCode": "USD",
+                            "Amount": float(pricing_record.listing_price) * 0.95
+                        },
+                        "SuggestedLowerPricePlusShipping": {
+                            "CurrencyCode": "USD",
+                            "Amount": float(pricing_record.listing_price) * 0.9
+                        },
+                        "SalesRankings": [
+                            {
+                                "ProductCategoryId": "electronics",
+                                "Rank": 1000 + hash(req.seller_sku) % 9000
+                            }
+                        ],
+                        "BuyBoxEligibleOffers": [
+                            {
+                                "condition": req.item_condition,
+                                "fulfillmentChannel": "Amazon",
+                                "OfferCount": pricing_record.number_of_offer_listings or 1
+                            }
+                        ],
+                        "OffersAvailableTime": datetime.utcnow().isoformat()
+                    },
+                    "Offers": [
+                        {
+                            "MyOffer": True,
+                            "offerType": "B2C",
+                            "SubCondition": "new",
+                            "SellerId": "TEST_SELLER",
+                            "ConditionNotes": "",
+                            "SellerFeedbackRating": {
+                                "SellerPositiveFeedbackRating": 98.0,
+                                "FeedbackCount": 1000
+                            },
+                            "ShippingTime": {
+                                "minimumHours": 24,
+                                "maximumHours": 48,
+                                "availableDate": datetime.utcnow().date().isoformat(),
+                                "availabilityType": "NOW"
+                            },
+                            "ListingPrice": {
+                                "CurrencyCode": "USD",
+                                "Amount": float(pricing_record.listing_price)
+                            },
+                            "quantityDiscountPrices": [
+                                {
+                                    "quantityTier": 1,
+                                    "quantityDiscountType": "QUANTITY_DISCOUNT",
+                                    "listingPrice": {
+                                        "CurrencyCode": "USD",
+                                        "Amount": float(pricing_record.listing_price)
+                                    }
+                                }
+                            ],
+                            "Points": {
+                                "PointsNumber": pricing_record.points_value or 0,
+                                "PointsMonetaryValue": {
+                                    "CurrencyCode": "USD",
+                                    "Amount": (pricing_record.points_value or 0) * 0.01
+                                }
+                            },
+                            "Shipping": {
+                                "CurrencyCode": "USD",
+                                "Amount": float(pricing_record.shipping_price) if pricing_record.shipping_price else 0.0
+                            },
+                            "ShipsFrom": {
+                                "State": "WA",
+                                "Country": "US"
+                            },
+                            "IsFulfilledByAmazon": True,
+                            "PrimeInformation": {
+                                "IsPrime": True,
+                                "IsNationalPrime": True
+                            },
+                            "IsBuyBoxWinner": True,
+                            "IsFeaturedMerchant": True
+                        }
+                    ]
+                }
+                
+                response = BatchResponse(
+                    headers={"Date": datetime.utcnow().isoformat(), "x-amzn-RequestId": f"batch-{hash(str(req))}"},
+                    status={"statusCode": 200, "reasonPhrase": "OK"},
+                    body={"payload": payload},
+                    request={
+                        "MarketplaceId": req.marketplace_id,
+                        "ItemCondition": req.item_condition,
+                        "CustomerType": req.customer_type,
+                        "SellerSKU": req.seller_sku
+                    }
+                )
+                responses.append(response)
+                
+            except Exception as e:
+                # Handle individual request errors
+                response = BatchResponse(
+                    headers={"Date": datetime.utcnow().isoformat(), "x-amzn-RequestId": f"batch-{hash(str(req))}"},
+                    status={"statusCode": 500, "reasonPhrase": "Internal Server Error"},
+                    body={
+                        "errors": [
+                            {
+                                "code": "InternalError",
+                                "message": str(e),
+                                "details": ""
+                            }
+                        ]
+                    },
+                    request={
+                        "MarketplaceId": req.marketplace_id,
+                        "ItemCondition": req.item_condition,
+                        "CustomerType": req.customer_type,
+                        "SellerSKU": req.seller_sku
+                    }
+                )
+                responses.append(response)
+        
+        return BatchResponseContainer(responses=responses)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

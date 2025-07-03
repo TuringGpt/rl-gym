@@ -34,9 +34,13 @@ from app.api import (
     fba_inventory_2020_12_01,
     catalog_items_2022_04_01,
     product_pricing_v0,
+    product_fees_v0,
+    product_pricing_2022_05_01,
     finances_v0,
-    invoices_2024_06_19
+    invoices_2024_06_19,
+    messaging_v1
 )
+from app.api import sales_v1
 from app.models import *  # Import all models to register them
 
 # Configure logging
@@ -104,11 +108,23 @@ app = FastAPI(
     ### 💰 **Product Pricing API (v0)**
     Competitive pricing data with offer management and pricing comparisons.
     
+    ### 💸 **Product Fees API (v0)**
+    Comprehensive fee estimation for SKUs and ASINs with detailed breakdown of FBA fees, referral fees, and other charges.
+    
+    ### 🚀 **Product Pricing API (v2022-05-01)**
+    Advanced pricing intelligence with featured offer expected pricing and competitive summary analysis.
+    
     ### 💳 **Finances API (v0)**
     Financial events and settlement information with detailed transaction data.
     
     ### 🧾 **Invoices API (2024-06-19)**
     Tax invoice management with document generation, export functionality, and comprehensive filtering.
+    
+    ### 📈 **Sales API (v1)**
+    Sales metrics and order analytics with granular aggregation by time periods, buyer types, and product filters.
+    
+    ### 💬 **Messaging API (v1)**
+    Comprehensive buyer-seller messaging system with HAL+JSON responses, message action management, and multi-locale support.
     
     ## ✨ Key Features
     
@@ -211,9 +227,13 @@ app.include_router(listings_2021_08_01.router, prefix="/listings/2021-08-01", ta
 app.include_router(feeds_2021_06_30.router, prefix="/feeds/2021-06-30", tags=["Feeds"])
 app.include_router(fba_inventory_2020_12_01.router, tags=["FBA Inventory"])
 app.include_router(catalog_items_2022_04_01.router, tags=["Catalog Items"])
-app.include_router(product_pricing_v0.router, tags=["Product Pricing"])
+app.include_router(product_pricing_v0.router, tags=["Product Pricing v0"])
+app.include_router(product_fees_v0.router, tags=["Product Fees"])
+app.include_router(product_pricing_2022_05_01.router, tags=["Product Pricing v2022-05-01"])
 app.include_router(finances_v0.router, tags=["Finances"])
 app.include_router(invoices_2024_06_19.router, tags=["Invoices"])
+app.include_router(sales_v1.router, tags=["Sales"])
+app.include_router(messaging_v1.router, tags=["Messaging"])
 
 # Admin endpoints for data generation (development only)
 if os.getenv("ENVIRONMENT") == "development":
@@ -271,8 +291,12 @@ async def root():
             "feeds": "/feeds/2021-06-30",
             "catalog_items": "/catalog/2022-04-01",
             "product_pricing": "/products/pricing/v0",
+            "product_fees": "/products/fees/v0",
+            "product_pricing_2022": "/products/pricing/2022-05-01",
             "finances": "/finances/v0",
-            "invoices": "/tax/invoices/2024-06-19"
+            "invoices": "/tax/invoices/2024-06-19",
+            "sales": "/sales/v1",
+            "messaging": "/messaging/v1"
         },
         "authentication": "/auth/oauth/token"
     }
