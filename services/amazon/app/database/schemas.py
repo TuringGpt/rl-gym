@@ -289,3 +289,59 @@ class Notification(Base, TimestampMixin):
     event_time = Column(DateTime(timezone=True), nullable=False)
     payload = Column(JSON, nullable=False)
     notification_metadata = Column(JSON)
+
+class Invoice(Base, TimestampMixin):
+    """Invoice model."""
+    
+    __tablename__ = "invoices"
+    
+    id = Column(String(50), primary_key=True)
+    date = Column(DateTime(timezone=True), nullable=False)
+    error_code = Column(String(100))
+    external_invoice_id = Column(String(100))
+    gov_response = Column(Text)
+    invoice_type = Column(String(50), nullable=False)
+    series = Column(String(50))
+    status = Column(String(50), nullable=False)
+    transaction_ids = Column(JSON)
+    transaction_type = Column(String(50), nullable=False)
+    
+    # Relationships
+    documents = relationship("InvoiceDocument", back_populates="invoice", cascade="all, delete-orphan")
+
+class InvoiceDocument(Base, TimestampMixin):
+    """Invoice document model."""
+    
+    __tablename__ = "invoice_documents"
+    
+    document_id = Column(String(50), primary_key=True)
+    invoice_id = Column(String(50), ForeignKey("invoices.id"), nullable=False)
+    document_url = Column(Text, nullable=False)
+    document_type = Column(String(50), default="PDF")
+    file_size = Column(Integer)
+    
+    # Relationships
+    invoice = relationship("Invoice", back_populates="documents")
+
+class InvoiceExport(Base, TimestampMixin):
+    """Invoice export model."""
+    
+    __tablename__ = "invoice_exports"
+    
+    export_id = Column(String(50), primary_key=True)
+    status = Column(String(50), nullable=False, default="REQUESTED")
+    generate_export_started_at = Column(DateTime(timezone=True))
+    generate_export_finished_at = Column(DateTime(timezone=True))
+    invoices_document_ids = Column(JSON)
+    error_message = Column(Text)
+    request_filters = Column(JSON)
+
+class InvoiceAttribute(Base, TimestampMixin):
+    """Invoice attribute model for filtering options."""
+    
+    __tablename__ = "invoice_attributes"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    attribute_type = Column(String(50), nullable=False)  # status, invoice_type, etc.
+    value = Column(String(100), nullable=False)
+    description = Column(String(200), nullable=False)
