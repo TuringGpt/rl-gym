@@ -347,3 +347,129 @@ async def confirm_order(
             "Status": "Success"
         }
     }
+
+@router.get("/orders/{orderId}/orderItems/buyerInfo")
+async def get_order_items_buyer_info(
+    orderId: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    NextToken: Optional[str] = Query(None, description="Next token for pagination"),
+    MaxResultsPerPage: Optional[int] = Query(100, ge=1, le=100, description="Maximum results per page")
+):
+    """
+    Get buyer information for order items.
+    
+    Returns buyer information for the order items in the order that you specify.
+    """
+    
+    # Get order items buyer info from service
+    order_service = OrderService(db)
+    result = await order_service.get_order_items_buyer_info(
+        orderId,
+        max_results=MaxResultsPerPage,
+        next_token=NextToken
+    )
+    
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail=amazon_formatter.error_response(
+                "ResourceNotFound",
+                f"Order {orderId} not found"
+            ).body.decode()
+        )
+    
+    return {
+        "payload": {
+            "AmazonOrderId": orderId,
+            "OrderItems": result["order_items"],
+            "NextToken": result.get("next_token")
+        }
+    }
+
+@router.post("/orders/{orderId}/shipment")
+async def update_shipment_status(
+    orderId: str,
+    request: Request,
+    shipment_data: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    Update shipment status.
+    
+    Updates the status of the specified order to ReadyForPickup or PickedUp.
+    """
+    
+    # Update shipment status via service
+    order_service = OrderService(db)
+    result = await order_service.update_shipment_status(orderId, shipment_data)
+    
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail=amazon_formatter.error_response(
+                "ResourceNotFound",
+                f"Order {orderId} not found"
+            ).body.decode()
+        )
+    
+    # Return 204 No Content for successful update
+    return ""
+
+@router.patch("/orders/{orderId}/regulatedInfo")
+async def update_verification_status(
+    orderId: str,
+    request: Request,
+    verification_data: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    Update verification status.
+    
+    Updates the verification status of the specified order.
+    """
+    
+    # Update verification status via service
+    order_service = OrderService(db)
+    result = await order_service.update_verification_status(orderId, verification_data)
+    
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail=amazon_formatter.error_response(
+                "ResourceNotFound",
+                f"Order {orderId} not found"
+            ).body.decode()
+        )
+    
+    # Return 204 No Content for successful update
+    return ""
+
+@router.post("/orders/{orderId}/shipmentConfirmation")
+async def confirm_shipment(
+    orderId: str,
+    request: Request,
+    confirmation_data: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    Confirm shipment.
+    
+    Updates the shipment confirmation status for the specified order.
+    """
+    
+    # Confirm shipment via service
+    order_service = OrderService(db)
+    result = await order_service.confirm_shipment(orderId, confirmation_data)
+    
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail=amazon_formatter.error_response(
+                "ResourceNotFound",
+                f"Order {orderId} not found"
+            ).body.decode()
+        )
+    
+    # Return 204 No Content for successful confirmation
+    return ""

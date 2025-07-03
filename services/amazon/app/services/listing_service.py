@@ -160,3 +160,254 @@ class ListingService:
             "status": status,
             "last_updated": listing.last_updated_date.isoformat() + "Z"
         }
+    
+    async def patch_listing(self, seller_id: str, sku: str, patches: List[Dict[str, Any]],
+                          marketplace_ids: List[str] = None) -> Dict[str, Any]:
+        """Apply patch operations to a listing."""
+        
+        listing = self.db.query(Listing).filter(
+            Listing.seller_id == seller_id,
+            Listing.seller_sku == sku
+        ).first()
+        
+        if not listing:
+            return None
+        
+        # Apply patches
+        for patch in patches:
+            op = patch.get("op")
+            path = patch.get("path", "")
+            value = patch.get("value")
+            
+            if op == "add" or op == "replace":
+                if path.startswith("/attributes/"):
+                    attr_name = path.replace("/attributes/", "")
+                    if not listing.attributes:
+                        listing.attributes = {}
+                    listing.attributes[attr_name] = value
+                elif path == "/product_type":
+                    listing.product_type = value
+                elif path == "/item_name":
+                    listing.item_name = value
+            elif op == "remove":
+                if path.startswith("/attributes/"):
+                    attr_name = path.replace("/attributes/", "")
+                    if listing.attributes and attr_name in listing.attributes:
+                        del listing.attributes[attr_name]
+        
+        listing.last_updated_date = datetime.utcnow()
+        self.db.commit()
+        
+        return {
+            "seller_sku": sku,
+            "status": "ACCEPTED",
+            "submission_id": f"patch_{sku}_{int(datetime.utcnow().timestamp())}"
+        }
+    
+    async def search_listings(self, seller_id: str, marketplace_ids: List[str],
+                            included_data: List[str] = None, identifiers: List[str] = None,
+                            identifiers_type: str = None, page_size: int = 10,
+                            page_token: str = None, sort_by: str = None,
+                            sort_order: str = "ASC") -> Dict[str, Any]:
+        """Search for listings."""
+        
+        query = self.db.query(Listing).filter(Listing.seller_id == seller_id)
+        
+        # Apply filters
+        if identifiers:
+            if identifiers_type == "SKU":
+                query = query.filter(Listing.seller_sku.in_(identifiers))
+            elif identifiers_type == "ASIN":
+                query = query.filter(Listing.asin.in_(identifiers))
+        
+        # Apply sorting
+        if sort_by == "lastUpdatedDate":
+            if sort_order == "DESC":
+                query = query.order_by(Listing.last_updated_date.desc())
+            else:
+                query = query.order_by(Listing.last_updated_date.asc())
+        else:
+            query = query.order_by(Listing.seller_sku)
+        
+        # Apply pagination
+        offset = 0
+        if page_token:
+            try:
+                offset = int(page_token) * page_size
+            except:
+                offset = 0
+        
+        total_count = query.count()
+        listings = query.offset(offset).limit(page_size).all()
+        
+        # Convert to response format
+        result_listings = []
+        for listing in listings:
+            listing_data = {
+                "sku": listing.seller_sku,
+                "summaries": [
+                    {
+                        "marketplaceId": "ATVPDKIKX0DER",
+                        "asin": listing.asin or f"MOCK{listing.seller_sku}",
+                        "productType": listing.product_type or "UNKNOWN",
+                        "conditionType": "new_new",
+                        "status": ["BUYABLE"] if listing.status == "ACTIVE" else ["INACTIVE"],
+                        "itemName": listing.item_name or f"Item {listing.seller_sku}",
+                        "createdDate": listing.created_date.isoformat() + "Z" if listing.created_date else "",
+                        "lastUpdatedDate": listing.last_updated_date.isoformat() + "Z" if listing.last_updated_date else ""
+                    }
+                ],
+                "attributes": listing.attributes or {},
+                "offers": [
+                    {
+                        "marketplaceId": "ATVPDKIKX0DER",
+                        "offerType": "B2C",
+                        "price": {
+                            "currencyCode": "USD",
+                            "amount": "100.00"
+                        }
+                    }
+                ],
+                "fulfillmentAvailability": [
+                    {
+                        "fulfillmentChannelCode": "DEFAULT",
+                        "quantity": 100
+                    }
+                ],
+                "issues": []
+            }
+            result_listings.append(listing_data)
+        
+        next_token = str(offset // page_size + 1) if len(listings) == page_size else None
+        
+        return {
+            "total_count": total_count,
+            "listings": result_listings,
+            "next_token": next_token
+        }
+    
+    async def get_listing_restrictions(self, asin: str, condition_type: str,
+                                     seller_id: str, marketplace_ids: List[str],
+                                     reason_locale: str = None) -> List[Dict[str, Any]]:
+        """Get listing restrictions for an ASIN."""
+        
+        # Mock restrictions data - in reality this would check against Amazon's restriction database
+        restrictions = []
+        
+        # Example restriction for certain conditions
+        if condition_type in ["used_acceptable", "used_good"]:
+            restrictions.append({
+                "marketplaceId": marketplace_ids[0],
+                "conditionType": condition_type,
+                "reasons": [
+                    {
+                        "message": "You cannot list the product in this condition.",
+                        "links": [
+                            {
+                                "resource": f"https://sellercentral.amazon.com/hz/approvalrequest/restrictions/approve?asin={asin}",
+                                "verb": "GET",
+                                "title": "Request Approval via Seller Central.",
+                                "type": "text/html"
+                            }
+                        ]
+                    }
+                ]
+            })
+        
+        return restrictions
+    
+    async def search_product_types(self, marketplace_ids: List[str],
+                                 keywords: List[str] = None,
+                                 item_name: str = None) -> Dict[str, Any]:
+        """Search for product types."""
+        
+        # Mock product types data
+        product_types = [
+            {
+                "name": "LUGGAGE",
+                "displayName": "Luggage",
+                "marketplaceIds": marketplace_ids
+            },
+            {
+                "name": "TELEVISION",
+                "displayName": "Television",
+                "marketplaceIds": marketplace_ids
+            },
+            {
+                "name": "ELECTRONICS",
+                "displayName": "Electronics",
+                "marketplaceIds": marketplace_ids
+            }
+        ]
+        
+        # Filter by keywords
+        if keywords:
+            filtered_types = []
+            for product_type in product_types:
+                for keyword in keywords:
+                    if keyword.lower() in product_type["displayName"].lower():
+                        filtered_types.append(product_type)
+                        break
+            product_types = filtered_types
+        
+        # Filter by item name
+        if item_name:
+            if "luggage" in item_name.lower():
+                product_types = [pt for pt in product_types if pt["name"] == "LUGGAGE"]
+            elif "tv" in item_name.lower() or "television" in item_name.lower():
+                product_types = [pt for pt in product_types if pt["name"] == "TELEVISION"]
+        
+        return {
+            "productTypes": product_types,
+            "productTypeVersion": "LATEST"
+        }
+    
+    async def get_product_type_definition(self, product_type: str, marketplace_ids: List[str],
+                                        seller_id: str = None, product_type_version: str = "LATEST",
+                                        requirements: str = "LISTING", requirements_enforced: str = "ENFORCED",
+                                        locale: str = "DEFAULT") -> Dict[str, Any]:
+        """Get product type definition."""
+        
+        # Mock product type definition
+        definition = {
+            "metaSchema": {
+                "resource": "https://meta-schema-url",
+                "verb": "GET",
+                "checksum": "c7af9479ca7261645cea9db56c5f720d"
+            },
+            "schema": {
+                "resource": "https://schema-url",
+                "verb": "GET",
+                "checksum": "c7af9479ca7261645cea9db56c5f720d"
+            },
+            "requirements": requirements,
+            "requirementsEnforced": requirements_enforced,
+            "propertyGroups": {
+                "product_identity": {
+                    "title": "Product Identity",
+                    "description": "Information to uniquely identify your product (e.g., UPC, EAN, GTIN, Product Type, Brand)",
+                    "propertyNames": [
+                        "item_name",
+                        "brand",
+                        "external_product_id",
+                        "gtin_exemption_reason",
+                        "merchant_suggested_asin",
+                        "product_type",
+                        "product_category",
+                        "product_subcategory",
+                        "item_type_keyword"
+                    ]
+                }
+            },
+            "locale": "en_US" if locale == "DEFAULT" else locale,
+            "marketplaceIds": marketplace_ids,
+            "productType": product_type,
+            "displayName": product_type.title(),
+            "productTypeVersion": {
+                "version": "UHqSqmb4FNUk=",
+                "latest": True,
+                "releaseCandidate": False
+            }
+        }
+        
+        return definition

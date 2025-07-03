@@ -188,6 +188,23 @@ class CatalogItem(Base, TimestampMixin):
     product_types = Column(JSON)
     sales_rankings = Column(JSON)
     browse_node_info = Column(JSON)
+    seller_id = Column(String(50))
+    manufacturer = Column(String(100))
+    model_number = Column(String(100))
+    size_name = Column(String(50))
+    style_name = Column(String(50))
+    product_category_id = Column(String(100))
+    vendor_details = Column(JSON)
+
+class CatalogCategory(Base, TimestampMixin):
+    """Catalog category model."""
+    
+    __tablename__ = "catalog_categories"
+    
+    product_category_id = Column(String(100), primary_key=True)
+    marketplace_id = Column(String(20), primary_key=True)
+    product_category_name = Column(String(200), nullable=False)
+    parent_category_id = Column(String(100))
 
 class Report(Base, TimestampMixin):
     """Report model."""

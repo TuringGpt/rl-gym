@@ -82,13 +82,13 @@ class AmazonResponseFormatter(ResponseFormatter):
             headers=headers or {}
         )
     
-    def error_response(self, error_code: str, message: str, status_code: int = 400, 
+    def error_response(self, error: str, message: str, status_code: int = 400,
                       details: Dict[str, Any] = None, headers: Dict[str, str] = None) -> JSONResponse:
         """Format Amazon SP-API error response."""
         response_data = {
             "errors": [
                 {
-                    "code": error_code,
+                    "code": error,
                     "message": message,
                     "details": details or {}
                 }
