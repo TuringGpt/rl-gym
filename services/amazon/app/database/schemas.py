@@ -77,6 +77,9 @@ class Order(Base, TimestampMixin):
     # Relationships
     order_items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
     shipments = relationship("Shipment", back_populates="order", cascade="all, delete-orphan")
+    messaging_actions = relationship("MessagingAction", back_populates="order", cascade="all, delete-orphan")
+    messages = relationship("Message", back_populates="order", cascade="all, delete-orphan")
+    buyer_attributes = relationship("BuyerAttributes", back_populates="order", uselist=False, cascade="all, delete-orphan")
 
 class OrderItem(Base, TimestampMixin):
     """Order item model."""
@@ -257,6 +260,30 @@ class ProductPricing(Base, TimestampMixin):
     number_of_offer_listings = Column(Integer)
     trade_in_value = Column(Numeric(10, 2))
 
+class ProductFees(Base, TimestampMixin):
+    """Product fees model for Amazon Product Fees API."""
+    
+    __tablename__ = "product_fees"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    seller_sku = Column(String(100))
+    asin = Column(String(20))
+    marketplace_id = Column(String(20), nullable=False)
+    seller_id = Column(String(50), nullable=False)
+    product_type = Column(String(100))
+    item_condition = Column(String(20), default="New")
+    fulfillment_fee = Column(Numeric(10, 2), default=0.00)
+    referral_fee_rate = Column(Numeric(5, 4), default=0.15)  # As percentage (0.15 = 15%)
+    storage_fee = Column(Numeric(10, 2), default=0.00)
+    removal_fee = Column(Numeric(10, 2), default=0.00)
+    disposal_fee = Column(Numeric(10, 2), default=0.00)
+    return_processing_fee = Column(Numeric(10, 2), default=0.00)
+    high_volume_listing_fee = Column(Numeric(10, 2), default=0.00)
+    multichannel_fulfillment_fee = Column(Numeric(10, 2), default=0.00)
+    weight = Column(Numeric(8, 2))  # Product weight in pounds
+    dimensions = Column(JSON)  # {"length": x, "width": y, "height": z}
+    category = Column(String(100))  # Product category for fee calculations
+
 class FinancialEvent(Base, TimestampMixin):
     """Financial event model."""
     
@@ -345,3 +372,70 @@ class InvoiceAttribute(Base, TimestampMixin):
     attribute_type = Column(String(50), nullable=False)  # status, invoice_type, etc.
     value = Column(String(100), nullable=False)
     description = Column(String(200), nullable=False)
+
+class SalesMetrics(Base, TimestampMixin):
+    """Sales metrics model for aggregated sales data."""
+    
+    __tablename__ = "sales_metrics"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    interval = Column(String(100), nullable=False)  # e.g., "2024-01-01T00:00:00Z/2024-01-01T01:00:00Z"
+    granularity = Column(String(20), nullable=False)  # Hour, Day, Week, Month, Quarter, Year
+    unit_count = Column(Integer, default=0)
+    order_item_count = Column(Integer, default=0)
+    order_count = Column(Integer, default=0)
+    average_unit_price = Column(Numeric(10, 2), default=0.00)
+    total_sales = Column(Numeric(10, 2), default=0.00)
+    currency_code = Column(String(3), default="USD")
+    buyer_type = Column(String(10), default="All")  # All, B2B, B2C
+    marketplace_ids = Column(JSON)
+    asin = Column(String(20))
+    sku = Column(String(100))
+    period_start = Column(DateTime(timezone=True), nullable=False)
+    period_end = Column(DateTime(timezone=True), nullable=False)
+
+class MessagingAction(Base, TimestampMixin):
+    """Messaging action model for available message types per order."""
+    
+    __tablename__ = "messaging_actions"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    amazon_order_id = Column(String(50), ForeignKey("orders.amazon_order_id"), nullable=False)
+    marketplace_id = Column(String(20), nullable=False)
+    action_name = Column(String(100), nullable=False)  # confirmCustomizationDetails, negativeFeedbackRemoval, etc.
+    is_available = Column(Boolean, default=True)
+    description = Column(String(500))
+    
+    # Relationships
+    order = relationship("Order", back_populates="messaging_actions")
+
+class Message(Base, TimestampMixin):
+    """Message model for buyer-seller communications."""
+    
+    __tablename__ = "messages"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    amazon_order_id = Column(String(50), ForeignKey("orders.amazon_order_id"), nullable=False)
+    message_type = Column(String(100), nullable=False)  # Same as action_name
+    subject = Column(String(255))
+    body = Column(Text, nullable=False)
+    status = Column(String(20), default="sent")  # sent, delivered, failed
+    sent_at = Column(DateTime(timezone=True))
+    delivered_at = Column(DateTime(timezone=True))
+    
+    # Relationships
+    order = relationship("Order", back_populates="messages")
+
+class BuyerAttributes(Base, TimestampMixin):
+    """Buyer attributes model for messaging requirements."""
+    
+    __tablename__ = "buyer_attributes"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    amazon_order_id = Column(String(50), ForeignKey("orders.amazon_order_id"), nullable=False, unique=True)
+    locale = Column(String(10), default="en-US")  # en-US, es-MX, fr-CA, etc.
+    country_code = Column(String(2))
+    language_code = Column(String(2))
+    
+    # Relationships
+    order = relationship("Order", back_populates="buyer_attributes")
