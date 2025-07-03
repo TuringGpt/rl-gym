@@ -34,7 +34,8 @@ from app.api import (
     fba_inventory_2020_12_01,
     catalog_items_2022_04_01,
     product_pricing_v0,
-    finances_v0
+    finances_v0,
+    invoices_2024_06_19
 )
 from app.models import *  # Import all models to register them
 
@@ -105,6 +106,9 @@ app = FastAPI(
     
     ### 💳 **Finances API (v0)**
     Financial events and settlement information with detailed transaction data.
+    
+    ### 🧾 **Invoices API (2024-06-19)**
+    Tax invoice management with document generation, export functionality, and comprehensive filtering.
     
     ## ✨ Key Features
     
@@ -209,6 +213,7 @@ app.include_router(fba_inventory_2020_12_01.router, tags=["FBA Inventory"])
 app.include_router(catalog_items_2022_04_01.router, tags=["Catalog Items"])
 app.include_router(product_pricing_v0.router, tags=["Product Pricing"])
 app.include_router(finances_v0.router, tags=["Finances"])
+app.include_router(invoices_2024_06_19.router, tags=["Invoices"])
 
 # Admin endpoints for data generation (development only)
 if os.getenv("ENVIRONMENT") == "development":
@@ -266,7 +271,8 @@ async def root():
             "feeds": "/feeds/2021-06-30",
             "catalog_items": "/catalog/2022-04-01",
             "product_pricing": "/products/pricing/v0",
-            "finances": "/finances/v0"
+            "finances": "/finances/v0",
+            "invoices": "/tax/invoices/2024-06-19"
         },
         "authentication": "/auth/oauth/token"
     }
