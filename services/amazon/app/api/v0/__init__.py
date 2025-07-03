@@ -1,1 +1,0 @@
-# Amazon SP-API v0 endpoints

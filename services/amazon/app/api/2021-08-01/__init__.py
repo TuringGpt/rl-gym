@@ -1,1 +1,0 @@
-# Amazon SP-API 2021-08-01 endpoints

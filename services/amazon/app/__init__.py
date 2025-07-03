@@ -1,1 +1,0 @@
-# Amazon SP-API Mock Service Application Package
