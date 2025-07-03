@@ -289,3 +289,90 @@ class OrderService:
                 "NumberOfItems": 1
             }
         }
+    
+    async def get_order_items_buyer_info(self, order_id: str, max_results: int = 100,
+                                       next_token: str = None) -> Optional[Dict[str, Any]]:
+        """Get buyer information for order items."""
+        
+        # First verify the order exists
+        order = self.db.query(Order).filter(Order.amazon_order_id == order_id).first()
+        if not order:
+            return None
+        
+        # Get order items
+        query = self.db.query(OrderItem).filter(OrderItem.amazon_order_id == order_id)
+        
+        # Handle pagination
+        offset = 0
+        if next_token:
+            try:
+                offset = int(next_token)
+            except (ValueError, TypeError):
+                offset = 0
+        
+        total_count = query.count()
+        items_query = query.offset(offset).limit(max_results)
+        items = items_query.all()
+        
+        # Convert to dict format with buyer info
+        items_data = []
+        for item in items:
+            item_dict = {
+                "OrderItemId": item.order_item_id,
+                "BuyerCustomizedInfo": {
+                    "CustomizedURL": "https://zme-caps.amazon.com/t/bR6qHkzSOxuB/J8nbWhze0Bd3DkajkOdY-XQbWkFralegp2sr_QZiKEE/1"
+                },
+                "GiftMessageText": "For you!",
+                "GiftWrapPrice": {
+                    "CurrencyCode": "USD",
+                    "Amount": "1.99"
+                },
+                "GiftWrapLevel": "Classic"
+            }
+            items_data.append(item_dict)
+        
+        # Calculate next token
+        new_next_token = None
+        if offset + max_results < total_count:
+            new_next_token = str(offset + max_results)
+        
+        return {
+            "order_items": items_data,
+            "next_token": new_next_token,
+            "total_count": total_count
+        }
+    
+    async def update_verification_status(self, order_id: str, verification_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Update verification status for regulated information."""
+        order = self.db.query(Order).filter(Order.amazon_order_id == order_id).first()
+        
+        if not order:
+            return None
+        
+        # Mock verification update - in reality this would update verification status
+        order.last_update_date = datetime.utcnow()
+        self.db.commit()
+        
+        return {
+            "status": "updated",
+            "order_id": order_id,
+            "verification_status": verification_data.get("status", "verified")
+        }
+    
+    async def confirm_shipment(self, order_id: str, confirmation_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Confirm shipment for an order."""
+        order = self.db.query(Order).filter(Order.amazon_order_id == order_id).first()
+        
+        if not order:
+            return None
+        
+        # Update order status to shipped
+        order.order_status = "Shipped"
+        order.last_update_date = datetime.utcnow()
+        self.db.commit()
+        
+        return {
+            "status": "confirmed",
+            "order_id": order_id,
+            "confirmation_id": f"ship_conf_{order_id}_{int(datetime.utcnow().timestamp())}"
+        }

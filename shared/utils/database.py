@@ -3,7 +3,7 @@ Database utilities for API Mock Gym services.
 Provides database connection management and common operations.
 """
 
-from sqlalchemy import create_engine, MetaData, inspect
+from sqlalchemy import create_engine, MetaData, inspect, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
@@ -120,19 +120,21 @@ class DatabaseManager:
         finally:
             session.close()
     
-    async def get_async_session(self) -> AsyncSession:
+    async def get_async_session(self):
         """Get asynchronous database session."""
         if not self.AsyncSessionLocal:
             raise RuntimeError("Async database not initialized")
         
-        async with self.AsyncSessionLocal() as session:
-            try:
-                yield session
-                await session.commit()
-            except Exception as e:
-                await session.rollback()
-                logger.error(f"Async database session error: {e}")
-                raise
+        session = self.AsyncSessionLocal()
+        try:
+            yield session
+            await session.commit()
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Async database session error: {e}")
+            raise
+        finally:
+            await session.close()
     
     def create_tables(self):
         """Create all tables."""
@@ -213,7 +215,7 @@ class DatabaseManager:
         """Check database health."""
         try:
             with self.get_session() as session:
-                result = session.execute("SELECT 1").fetchone()
+                result = session.execute(text("SELECT 1")).fetchone()
                 
             return {
                 "status": "healthy",

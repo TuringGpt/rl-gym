@@ -32,6 +32,8 @@ from app.api import (
     listings_2021_08_01,
     feeds_2021_06_30,
     fba_inventory_2020_12_01,
+    catalog_items_v0,
+    catalog_items_2020_12_01,
     catalog_items_2022_04_01,
     product_pricing_v0,
     product_fees_v0,
@@ -226,6 +228,8 @@ app.include_router(reports.router, prefix="/reports/2021-06-30", tags=["Reports"
 app.include_router(listings_2021_08_01.router, prefix="/listings/2021-08-01", tags=["Listings"])
 app.include_router(feeds_2021_06_30.router, prefix="/feeds/2021-06-30", tags=["Feeds"])
 app.include_router(fba_inventory_2020_12_01.router, tags=["FBA Inventory"])
+app.include_router(catalog_items_v0.router, tags=["Catalog Items v0"])
+app.include_router(catalog_items_2020_12_01.router, tags=["Catalog Items 2020-12-01"])
 app.include_router(catalog_items_2022_04_01.router, tags=["Catalog Items"])
 app.include_router(product_pricing_v0.router, tags=["Product Pricing v0"])
 app.include_router(product_fees_v0.router, tags=["Product Fees"])
