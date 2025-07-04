@@ -161,6 +161,126 @@ class ListingService:
             "last_updated": listing.last_updated_date.isoformat() + "Z"
         }
     
+    async def get_listing_detailed(self, seller_id: str, sku: str,
+                                 marketplace_ids: List[str] = None,
+                                 included_data: List[str] = None) -> Optional[Dict[str, Any]]:
+        """Get detailed listing information matching Amazon API response format."""
+        
+        listing = self.db.query(Listing).filter(
+            Listing.seller_id == seller_id,
+            Listing.seller_sku == sku
+        ).first()
+        
+        if not listing:
+            return None
+        
+        marketplace_id = marketplace_ids[0] if marketplace_ids else "ATVPDKIKX0DER"
+        
+        # Build response structure matching Amazon's format
+        response = {
+            "sku": sku
+        }
+        
+        # Add summaries if requested
+        if not included_data or "summaries" in included_data:
+            summaries = [{
+                "marketplaceId": marketplace_id,
+                "asin": listing.asin or f"B{sku[-8:].upper()}",
+                "productType": listing.product_type or "LUGGAGE",
+                "conditionType": "new_new",
+                "status": ["BUYABLE"] if listing.status == "ACTIVE" else ["INACTIVE"],
+                "itemName": listing.item_name or f"Product {sku}",
+                "createdDate": listing.created_date.isoformat() + "Z" if listing.created_date else "2021-02-01T00:00:00Z",
+                "lastUpdatedDate": listing.last_updated_date.isoformat() + "Z" if listing.last_updated_date else "2021-03-01T00:00:00Z",
+                "mainImage": {
+                    "link": f"https://www.example.com/{sku.lower()}.png",
+                    "height": 500,
+                    "width": 500
+                }
+            }]
+            response["summaries"] = summaries
+        
+        # Add offers if requested
+        if not included_data or "offers" in included_data:
+            offers = [{
+                "marketplaceId": marketplace_id,
+                "offerType": "B2C",
+                "price": {
+                    "currencyCode": "USD",
+                    "amount": "100.00"
+                },
+                "audience": {
+                    "value": "ALL",
+                    "displayName": "Sell on Amazon"
+                }
+            }]
+            response["offers"] = offers
+        
+        # Add fulfillment availability if requested
+        if not included_data or "fulfillmentAvailability" in included_data:
+            fulfillment_availability = [{
+                "fulfillmentChannelCode": "DEFAULT",
+                "quantity": 100
+            }]
+            response["fulfillmentAvailability"] = fulfillment_availability
+        
+        # Add issues (always included for demonstration)
+        sample_issues = [
+            {
+                "code": "90220",
+                "message": "'size' is required but not supplied.",
+                "severity": "ERROR",
+                "attributeNames": ["size"],
+                "categories": ["MISSING_ATTRIBUTE"]
+            },
+            {
+                "code": "18027",
+                "message": "We believe the main image has text, logo, graphic, or watermark that is not permitted for this product type. Submit a compliant image to lift the suppression. Also refer to Product image requirements.",
+                "severity": "ERROR",
+                "categories": ["INVALID_IMAGE"],
+                "enforcements": {
+                    "actions": [{"action": "SEARCH_SUPPRESSED"}],
+                    "exemption": {
+                        "status": "EXEMPT_UNTIL_EXPIRY_DATE",
+                        "expiryDate": "2025-05-28T00:36:48.914Z"
+                    }
+                }
+            },
+            {
+                "code": "99300",
+                "message": "Product Detail Page Rules Violation (Inaccurate information on product detail page)",
+                "severity": "ERROR",
+                "categories": [],
+                "enforcements": {
+                    "actions": [{"action": "ATTRIBUTE_SUPPRESSED"}],
+                    "exemption": {"status": "EXEMPT"}
+                }
+            },
+            {
+                "code": "18155",
+                "message": "The 'minimum price' is greater than the selling price (excluding shipping) for the listing. Review and update your price and/or minimum price.",
+                "severity": "ERROR",
+                "categories": ["INVALID_PRICE"],
+                "enforcements": {
+                    "actions": [{"action": "LISTING_SUPPRESSED"}],
+                    "exemption": {"status": "NOT_EXEMPT"}
+                }
+            },
+            {
+                "code": "18742",
+                "message": "Restricted Products Policy Violation",
+                "severity": "ERROR",
+                "categories": [],
+                "enforcements": {
+                    "actions": [{"action": "CATALOG_ITEM_REMOVED"}],
+                    "exemption": {"status": "NOT_EXEMPT"}
+                }
+            }
+        ]
+        response["issues"] = sample_issues[:2]  # Return subset for demo
+        
+        return response
+    
     async def patch_listing(self, seller_id: str, sku: str, patches: List[Dict[str, Any]],
                           marketplace_ids: List[str] = None) -> Dict[str, Any]:
         """Apply patch operations to a listing."""
@@ -243,21 +363,49 @@ class ListingService:
         # Convert to response format
         result_listings = []
         for listing in listings:
+            asin = listing.asin or f"B{listing.seller_sku[-8:].upper()}"
+            
+            # Build complex attributes structure similar to DOCX
+            complex_attributes = {
+                "total_hdmi_ports": [{"value": 4, "marketplace_id": "ATVPDKIKX0DER"}],
+                "resolution": [{"language_tag": "en_US", "value": "4K", "marketplace_id": "ATVPDKIKX0DER"}],
+                "item_weight": [{"unit": "pounds", "value": 107.6, "marketplace_id": "ATVPDKIKX0DER"}],
+                "product_subcategory": [{"value": "50400120", "marketplace_id": "ATVPDKIKX0DER"}],
+                "bullet_point": [
+                    {"language_tag": "en_US", "value": "SMART TV WITH UNIVERSAL GUIDE: Simple On-screen Guide is an easy way to find streaming content and live TV shows", "marketplace_id": "ATVPDKIKX0DER"},
+                    {"language_tag": "en_US", "value": "100% COLOR VOLUME WITH QUANTUM DOTS: Powered by Quantum dots, Samsung's 4K QLED TV offers over a billion shades of brilliant color", "marketplace_id": "ATVPDKIKX0DER"}
+                ],
+                "item_dimensions": [{
+                    "width": {"unit": "inches", "value": 72.4},
+                    "length": {"unit": "inches", "value": 2.4},
+                    "height": {"unit": "inches", "value": 41.4},
+                    "marketplace_id": "ATVPDKIKX0DER"
+                }],
+                "brand": [{"language_tag": "en_US", "value": "SAMSUNG", "marketplace_id": "ATVPDKIKX0DER"}],
+                "item_name": [{"language_tag": "en_US", "value": listing.item_name or f"Product {listing.seller_sku}", "marketplace_id": "ATVPDKIKX0DER"}],
+                "list_price": [{"currency": "USD", "value": 3799.99, "marketplace_id": "ATVPDKIKX0DER"}]
+            }
+            
             listing_data = {
                 "sku": listing.seller_sku,
                 "summaries": [
                     {
                         "marketplaceId": "ATVPDKIKX0DER",
-                        "asin": listing.asin or f"MOCK{listing.seller_sku}",
-                        "productType": listing.product_type or "UNKNOWN",
+                        "asin": asin,
+                        "productType": listing.product_type or "LUGGAGE",
                         "conditionType": "new_new",
                         "status": ["BUYABLE"] if listing.status == "ACTIVE" else ["INACTIVE"],
-                        "itemName": listing.item_name or f"Item {listing.seller_sku}",
-                        "createdDate": listing.created_date.isoformat() + "Z" if listing.created_date else "",
-                        "lastUpdatedDate": listing.last_updated_date.isoformat() + "Z" if listing.last_updated_date else ""
+                        "itemName": listing.item_name or "Hardside Carry-On Spinner Suitcase Luggage",
+                        "createdDate": listing.created_date.isoformat() + "Z" if listing.created_date else "2021-02-01T00:00:00Z",
+                        "lastUpdatedDate": listing.last_updated_date.isoformat() + "Z" if listing.last_updated_date else "2021-03-01T00:00:00Z",
+                        "mainImage": {
+                            "link": f"https://www.example.com/{listing.seller_sku.lower()}.png",
+                            "height": 500,
+                            "width": 500
+                        }
                     }
                 ],
-                "attributes": listing.attributes or {},
+                "attributes": complex_attributes,
                 "offers": [
                     {
                         "marketplaceId": "ATVPDKIKX0DER",
@@ -274,7 +422,28 @@ class ListingService:
                         "quantity": 100
                     }
                 ],
-                "issues": []
+                "issues": [
+                    {
+                        "code": "90220",
+                        "message": "'size' is required but not supplied.",
+                        "severity": "ERROR",
+                        "attributeNames": ["size"],
+                        "categories": ["MISSING_ATTRIBUTE"]
+                    },
+                    {
+                        "code": "18027",
+                        "message": "We believe the main image has text, logo, graphic or watermark which is not permitted for this product type. Submit a compliant image to lift the suppression. Also refer to Product image requirements.",
+                        "severity": "ERROR",
+                        "categories": ["INVALID_IMAGE"],
+                        "enforcements": {
+                            "actions": [{"action": "SEARCH_SUPPRESSED"}],
+                            "exemption": {
+                                "status": "EXEMPT_UNTIL_EXPIRY_DATE",
+                                "expiryDate": "2025-05-28T00:36:48.914Z"
+                            }
+                        }
+                    }
+                ]
             }
             result_listings.append(listing_data)
         

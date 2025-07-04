@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
+from datetime import datetime
 import uvicorn
 
 # Import shared utilities
@@ -223,21 +224,21 @@ token_router = create_mock_token_endpoint(amazon_auth, "amazon")
 app.include_router(token_router, prefix="/auth", tags=["Authentication"])
 
 # Include API routers
-app.include_router(orders.router, prefix="/orders/v0", tags=["Orders"])
-app.include_router(reports.router, prefix="/reports/2021-06-30", tags=["Reports"])
+# app.include_router(orders.router, prefix="/orders/v0", tags=["Orders"])
+# app.include_router(reports.router, prefix="/reports/2021-06-30", tags=["Reports"])
 app.include_router(listings_2021_08_01.router, prefix="/listings/2021-08-01", tags=["Listings"])
-app.include_router(feeds_2021_06_30.router, prefix="/feeds/2021-06-30", tags=["Feeds"])
-app.include_router(fba_inventory_2020_12_01.router, tags=["FBA Inventory"])
-app.include_router(catalog_items_v0.router, tags=["Catalog Items v0"])
-app.include_router(catalog_items_2020_12_01.router, tags=["Catalog Items 2020-12-01"])
-app.include_router(catalog_items_2022_04_01.router, tags=["Catalog Items"])
-app.include_router(product_pricing_v0.router, tags=["Product Pricing v0"])
-app.include_router(product_fees_v0.router, tags=["Product Fees"])
-app.include_router(product_pricing_2022_05_01.router, tags=["Product Pricing v2022-05-01"])
-app.include_router(finances_v0.router, tags=["Finances"])
-app.include_router(invoices_2024_06_19.router, tags=["Invoices"])
-app.include_router(sales_v1.router, tags=["Sales"])
-app.include_router(messaging_v1.router, tags=["Messaging"])
+# app.include_router(feeds_2021_06_30.router, prefix="/feeds/2021-06-30", tags=["Feeds"])
+# app.include_router(fba_inventory_2020_12_01.router, tags=["FBA Inventory"])
+# app.include_router(catalog_items_v0.router, tags=["Catalog Items v0"])
+# app.include_router(catalog_items_2020_12_01.router, tags=["Catalog Items 2020-12-01"])
+# app.include_router(catalog_items_2022_04_01.router, tags=["Catalog Items"])
+# app.include_router(product_pricing_v0.router, tags=["Product Pricing v0"])
+# app.include_router(product_fees_v0.router, tags=["Product Fees"])
+# app.include_router(product_pricing_2022_05_01.router, tags=["Product Pricing v2022-05-01"])
+# app.include_router(finances_v0.router, tags=["Finances"])
+# app.include_router(invoices_2024_06_19.router, tags=["Invoices"])
+# app.include_router(sales_v1.router, tags=["Sales"])
+# app.include_router(messaging_v1.router, tags=["Messaging"])
 
 # Admin endpoints for data generation (development only)
 if os.getenv("ENVIRONMENT") == "development":
@@ -268,6 +269,48 @@ if os.getenv("ENVIRONMENT") == "development":
             raise HTTPException(
                 status_code=500,
                 detail=f"Failed to generate mock data: {str(e)}"
+            )
+    
+    @app.post("/admin/reset-database", tags=["Admin"])
+    async def reset_database():
+        """Reset database to initial seeded state (development only)."""
+        try:
+            from app.services.database_reset import DatabaseResetService
+            
+            reset_service = DatabaseResetService(db_manager)
+            result = await reset_service.reset_to_initial_state()
+            
+            return {
+                "success": True,
+                "message": "Database reset to initial state successfully",
+                "details": result
+            }
+        except Exception as e:
+            logger.error(f"Failed to reset database: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to reset database: {str(e)}"
+            )
+    
+    @app.get("/admin/database-status", tags=["Admin"])
+    async def get_database_status():
+        """Get current database status and record counts (development only)."""
+        try:
+            from app.services.database_reset import DatabaseResetService
+            
+            reset_service = DatabaseResetService(db_manager)
+            status = reset_service.get_reset_status()
+            
+            return {
+                "success": True,
+                "status": status,
+                "timestamp": datetime.now().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Failed to get database status: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to get database status: {str(e)}"
             )
     
     @app.get("/admin/database-info", tags=["Admin"])
