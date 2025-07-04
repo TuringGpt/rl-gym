@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from '../contexts/SessionContext';
 import { flowService } from '../services/flowService';
-import { TestFlow } from '../types/flows';
+import { TestFlow, ValidationResult } from '../types/flows';
 
 const Flows = () => {
   const { currentSession } = useSession();
@@ -11,6 +11,9 @@ const Flows = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedFlow, setExpandedFlow] = useState<string | null>(null);
+  const [copiedText, setCopiedText] = useState<string | null>(null);
+  const [validatingFlows, setValidatingFlows] = useState<Set<string>>(new Set());
+  const [validationResults, setValidationResults] = useState<Record<string, ValidationResult>>({});
 
   useEffect(() => {
     loadFlows();
@@ -56,13 +59,56 @@ const Flows = () => {
     return matchesCategory && matchesSearch;
   });
 
-  const copyToClipboard = async (text: string) => {
+  const copyToClipboard = async (text: string, identifier?: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      // You could add a toast notification here
+      setCopiedText(identifier || 'text');
+      // Clear the copied indication after 2 seconds
+      setTimeout(() => setCopiedText(null), 2000);
     } catch (err) {
       console.error('Failed to copy text:', err);
     }
+  };
+
+  const validateFlow = async (flowId: string) => {
+    if (!currentSession) {
+      alert('Please create or select a session first');
+      return;
+    }
+
+    try {
+      setValidatingFlows(prev => new Set(prev).add(flowId));
+      const result = await flowService.validateFlow(flowId);
+      setValidationResults(prev => ({
+        ...prev,
+        [flowId]: result
+      }));
+    } catch (err: any) {
+      console.error('Validation failed:', err);
+      setValidationResults(prev => ({
+        ...prev,
+        [flowId]: {
+          success: false,
+          flow_id: flowId,
+          message: err.message || 'Validation failed',
+          validation_results: null
+        }
+      }));
+    } finally {
+      setValidatingFlows(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(flowId);
+        return newSet;
+      });
+    }
+  };
+
+  const getStatusColor = (success: boolean): string => {
+    return success ? 'success' : 'error';
+  };
+
+  const getStatusIcon = (success: boolean): string => {
+    return success ? '✅' : '❌';
   };
 
   const getCategoryColor = (category: string): string => {
@@ -152,8 +198,8 @@ const Flows = () => {
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
                   className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${selectedCategory === category.id
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                 >
                   <span className="mr-1">{category.icon}</span>
@@ -170,6 +216,8 @@ const Flows = () => {
         {filteredFlows.map((flow) => {
           const category = getFlowCategory(flow.id);
           const isExpanded = expandedFlow === flow.id;
+          const isValidating = validatingFlows.has(flow.id);
+          const validationResult = validationResults[flow.id];
 
           return (
             <div key={flow.id} className="card hover:shadow-md transition-shadow">
@@ -181,6 +229,16 @@ const Flows = () => {
                       <span className={`badge ${getCategoryColor(category)}`}>
                         {category}
                       </span>
+                      {validationResult && (
+                        <span className={`badge badge-${getStatusColor(validationResult.success)}`}>
+                          {validationResult.success ? 'PASS' : 'FAIL'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-2 mb-2">
+                      <span className="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                        {flow.id}
+                      </span>
                     </div>
                     <p className="text-gray-600 text-sm">{flow.description}</p>
                   </div>
@@ -188,16 +246,10 @@ const Flows = () => {
 
                 <div className="space-y-3">
                   <div>
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="mb-2">
                       <label className="text-sm font-medium text-gray-700">
                         Claude Instruction
                       </label>
-                      <button
-                        onClick={() => copyToClipboard(flow.claude_instruction)}
-                        className="text-xs text-primary-600 hover:text-primary-800 font-medium"
-                      >
-                        📋 Copy
-                      </button>
                     </div>
                     <div className={`bg-gray-50 rounded-lg p-3 text-sm font-mono ${isExpanded ? '' : 'max-h-20 overflow-hidden relative'
                       }`}>
@@ -218,20 +270,51 @@ const Flows = () => {
 
                   <div className="flex space-x-2">
                     <button
-                      onClick={() => copyToClipboard(flow.claude_instruction)}
+                      onClick={() => copyToClipboard(flow.claude_instruction, `button-${flow.id}`)}
                       className="btn-secondary flex-1 text-sm"
                     >
-                      📋 Copy Instruction
+                      {copiedText === `button-${flow.id}` ? '✅ Copied!' : '📋 Copy Instruction'}
                     </button>
                     {currentSession && (
-                      <a
-                        href={`/validation?flow=${flow.id}`}
-                        className="btn-primary flex-1 text-sm text-center"
+                      <button
+                        onClick={() => validateFlow(flow.id)}
+                        disabled={isValidating}
+                        className="btn-primary flex-1 text-sm"
                       >
-                        ✅ Validate
-                      </a>
+                        {isValidating ? '🔄 Validating...' : '✅ Validate'}
+                      </button>
                     )}
                   </div>
+
+                  {/* Validation Results */}
+                  {validationResult && (
+                    <div className={`mt-4 p-3 rounded-lg border ${validationResult.success
+                        ? 'border-success-200 bg-success-50'
+                        : 'border-error-200 bg-error-50'
+                      }`}>
+                      <div className="flex items-center space-x-2 mb-2">
+                        <span className="text-lg">{getStatusIcon(validationResult.success)}</span>
+                        <span className={`font-medium ${validationResult.success ? 'text-success-800' : 'text-error-800'
+                          }`}>
+                          {validationResult.success ? 'Validation Passed' : 'Validation Failed'}
+                        </span>
+                      </div>
+                      <p className={`text-sm ${validationResult.success ? 'text-success-700' : 'text-error-700'
+                        }`}>
+                        {validationResult.message}
+                      </p>
+                      {validationResult.validation_results && (
+                        <details className="mt-2">
+                          <summary className="text-xs cursor-pointer text-gray-600 hover:text-gray-800">
+                            View Details
+                          </summary>
+                          <pre className="mt-2 text-xs bg-white p-2 rounded border overflow-x-auto">
+                            {JSON.stringify(validationResult.validation_results, null, 2)}
+                          </pre>
+                        </details>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

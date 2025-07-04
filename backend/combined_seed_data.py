@@ -293,7 +293,7 @@ def create_comprehensive_sample_data():
             "description": "High-speed data transfer cable, 6 feet length",
             "price": 12.99,
             "quantity": 1000,
-            "status": "INACTIVE",
+            "status": "ACTIVE",
             "marketplace_ids": json.dumps(["ATVPDKIKX0DER"]),
         },
         {

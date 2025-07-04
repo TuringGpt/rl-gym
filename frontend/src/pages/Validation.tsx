@@ -65,10 +65,13 @@ const Validation = () => {
       setBulkValidating(true);
       const result = await flowService.validateAllFlows();
       setBulkValidationResult(result);
-      setValidationResults(result.results);
+      setValidationResults(result?.results || {});
     } catch (err: any) {
       console.error('Bulk validation failed:', err);
       alert('Bulk validation failed: ' + (err.message || 'Unknown error'));
+      // Reset validation results on error
+      setValidationResults({});
+      setBulkValidationResult(null);
     } finally {
       setBulkValidating(false);
     }
@@ -189,7 +192,7 @@ const Validation = () => {
               <option value="">Choose a test flow...</option>
               {flows.map((flow) => (
                 <option key={flow.id} value={flow.id}>
-                  {flow.name}
+                  {flow.id} - {flow.name}
                 </option>
               ))}
             </select>
@@ -216,7 +219,7 @@ const Validation = () => {
       </div>
 
       {/* Validation Results */}
-      {Object.keys(validationResults).length > 0 && (
+      {validationResults && Object.keys(validationResults).length > 0 && (
         <div className="card">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Validation Results</h2>
 
@@ -229,8 +232,8 @@ const Validation = () => {
                 <div
                   key={flowId}
                   className={`border rounded-lg p-4 ${result.success
-                      ? 'border-success-200 bg-success-50'
-                      : 'border-error-200 bg-error-50'
+                    ? 'border-success-200 bg-success-50'
+                    : 'border-error-200 bg-error-50'
                     }`}
                 >
                   <div className="flex items-start justify-between">

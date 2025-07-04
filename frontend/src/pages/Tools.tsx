@@ -8,6 +8,7 @@ const Tools = () => {
   const [resetResult, setResetResult] = useState<string | null>(null);
   const [testingBackend, setTestingBackend] = useState(false);
   const [backendTestResult, setBackendTestResult] = useState<any>(null);
+  const [sessionCopied, setSessionCopied] = useState(false);
 
   const handleResetDatabase = async () => {
     if (!currentSession) {
@@ -77,7 +78,8 @@ const Tools = () => {
 
     try {
       await navigator.clipboard.writeText(currentSession);
-      alert('Session ID copied to clipboard!');
+      setSessionCopied(true);
+      setTimeout(() => setSessionCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy session ID:', err);
       alert('Failed to copy session ID');
@@ -125,8 +127,8 @@ const Tools = () => {
 
             {resetResult && (
               <div className={`mt-3 p-3 rounded-lg text-sm ${resetResult.startsWith('✅')
-                  ? 'bg-success-50 text-success-800 border border-success-200'
-                  : 'bg-error-50 text-error-800 border border-error-200'
+                ? 'bg-success-50 text-success-800 border border-success-200'
+                : 'bg-error-50 text-error-800 border border-error-200'
                 }`}>
                 {resetResult}
               </div>
@@ -150,7 +152,7 @@ const Tools = () => {
               disabled={!currentSession}
               className={`btn ${!currentSession ? 'btn-secondary opacity-50 cursor-not-allowed' : 'btn-secondary'}`}
             >
-              📋 Copy Session ID
+              {sessionCopied ? '✅ Copied!' : '📋 Copy Session ID'}
             </button>
           </div>
 
@@ -191,8 +193,8 @@ const Tools = () => {
 
             {backendTestResult && (
               <div className={`mt-3 p-3 rounded-lg text-sm ${backendTestResult.success
-                  ? 'bg-success-50 text-success-800 border border-success-200'
-                  : 'bg-error-50 text-error-800 border border-error-200'
+                ? 'bg-success-50 text-success-800 border border-success-200'
+                : 'bg-error-50 text-error-800 border border-error-200'
                 }`}>
                 <div className="font-medium mb-1">
                   {backendTestResult.success ? '✅ Connection Successful' : '❌ Connection Failed'}

@@ -83,6 +83,49 @@ Frontend will be available at `http://localhost:3000`
 - **Bulk Operations**: Mass updates across multiple listings
 - **Analysis Operations**: Data analysis and reporting
 
+## 🤖 Claude Configuration
+
+### MCP Server Integration
+This project includes an MCP (Model Context Protocol) server that provides Claude with direct access to the SP-API testing framework.
+
+#### MCP Server Setup
+The MCP server (`mcp_server.py`) provides the following tools for Claude:
+- **get_listing_item**: Get details about specific listings
+- **create_or_update_listing**: Create or fully update listings
+- **update_listing_partial**: Partially update existing listings
+- **delete_listing_item**: Delete/deactivate listings
+- **search_listings**: Search for listings with filters
+
+#### Claude Integration Workflow
+1. **Session Creation**: Claude can create isolated testing sessions
+2. **API Operations**: Claude can perform all SP-API operations through MCP tools
+3. **Validation**: Use the frontend to validate Claude's actions
+4. **Testing Flows**: Claude can execute predefined test scenarios
+
+#### MCP Server Configuration
+```json
+{
+  "mcpServers": {
+    "amazon-sp-api-mock": {
+      "command": "/path/to/python",
+      "args": ["/path/to/rl-gym/mcp_server.py"],
+      "disabled": false,
+      "alwaysAllow": [],
+      "disabledTools": []
+    }
+  }
+}
+```
+
+#### Example Claude Usage
+```
+Claude, please:
+1. Create a session for testing
+2. Create a new laptop listing for SELLER001 with SKU 'TEST-LAPTOP-001'
+3. Set the title to 'Test Gaming Laptop' and price to $999.99
+4. Make it active in the US marketplace
+```
+
 ## 🔧 API Endpoints
 
 ### Session Management
@@ -126,6 +169,61 @@ Frontend will be available at `http://localhost:3000`
 - Practice API integration patterns
 - Understand session-based testing
 - Explore React + FastAPI architecture
+
+## 🧪 Testing with Claude
+
+### Prerequisites for Claude Integration
+1. **MCP Server Running**: Ensure the MCP server is configured and running
+2. **Backend Active**: FastAPI server must be running on port 8000
+3. **Frontend Available**: React dashboard should be accessible on port 3000
+
+### Claude Testing Workflow
+1. **Session Setup**:
+   ```
+   Claude, create a new testing session for SP-API testing
+   ```
+
+2. **Execute Test Flows**:
+   ```
+   Please perform the following test:
+   - Create a new laptop listing for SELLER001
+   - SKU: TEST-LAPTOP-001
+   - Title: Test Gaming Laptop
+   - Price: $999.99
+   - Status: ACTIVE
+   - Marketplace: US (ATVPDKIKX0DER)
+   ```
+
+3. **Validation**:
+   - Use the frontend dashboard to validate Claude's actions
+   - Check the "Test Flows" page for predefined scenarios
+   - Run validation to verify Claude performed actions correctly
+
+4. **Database Reset**:
+   ```
+   Claude, reset the database to prepare for the next test
+   ```
+
+### Available Test Scenarios
+- **Create Operations**: New product listings
+- **Update Operations**: Price changes, inventory updates
+- **Delete Operations**: Product deactivation
+- **Search Operations**: Finding products by criteria
+- **Bulk Operations**: Mass updates across multiple products
+- **Analysis Operations**: Data analysis and reporting
+
+### Claude Capabilities Testing
+- **API Interaction**: Can Claude make proper HTTP requests?
+- **Data Validation**: Does Claude handle response data correctly?
+- **Error Handling**: How does Claude respond to API errors?
+- **Complex Workflows**: Can Claude execute multi-step operations?
+- **Data Consistency**: Does Claude maintain data integrity?
+
+### Validation and Feedback
+- **Automated Validation**: Built-in test flow validation
+- **Visual Feedback**: Dashboard shows pass/fail results
+- **Detailed Reports**: JSON validation results for debugging
+- **Performance Metrics**: Track success rates and response times
 
 ## 🛠️ Development
 
