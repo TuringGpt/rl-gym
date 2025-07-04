@@ -95,7 +95,7 @@ def reset_test_database(
     """
     try:
         # Reset specific session
-        from session_manager import session_manager
+        from app.session_manager import session_manager
 
         success = session_manager.reset_session(x_session_id)
         if not success:
@@ -123,7 +123,7 @@ def get_current_database_state(
     Requires X-Session-ID header
     """
     try:
-        from models import ListingItem
+        from app.models import ListingItem
         from sqlalchemy import func
 
         # Basic counts

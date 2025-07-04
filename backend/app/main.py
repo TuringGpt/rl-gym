@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -7,16 +8,38 @@ from .database import engine, Base
 from .routers import router
 from app.sessions.router import session_router
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
 
-# Create FastAPI app
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Create database tables and seed data
+    print("Starting up: Creating database tables...")
+    Base.metadata.create_all(bind=engine)
+
+    # Initialize seed data for the main database if needed
+    try:
+        from combined_seed_data import create_comprehensive_sample_data
+
+        print("Seeding main database with sample data...")
+        create_comprehensive_sample_data()
+        print("Database initialization completed successfully!")
+    except Exception as e:
+        print(f"Warning: Could not seed main database: {e}")
+
+    yield
+
+    # Shutdown: Clean up resources if needed
+    print("Shutting down: Cleaning up resources...")
+    engine.dispose()
+
+
+# Create FastAPI app with lifespan
 app = FastAPI(
     title="Amazon SP-API Mock - Listings Items",
     description="A simple mock implementation of Amazon's Selling Partner API for Listings Items with Required Session Headers",
     version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # Add CORS middleware

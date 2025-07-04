@@ -182,23 +182,48 @@ create_comprehensive_sample_data()
             raise Exception(f"Failed to initialize session data: {str(e)}")
 
     def reset_session(self, session_id: str) -> bool:
-        """Reset session database to seed state"""
+        """Reset session database to seed state without deleting the database file"""
         try:
             with self._lock:
-                # Close existing connections
+                # Ensure session exists
+                if not self.session_exists(session_id):
+                    raise Exception(f"Session {session_id} does not exist")
+
+                # Get database path
+                db_path = self.get_session_db_path(session_id)
+
+                # Close existing connections temporarily
+                engine_backup = None
+                session_maker_backup = None
+
                 if session_id in self.engines:
                     self.engines[session_id].dispose()
+                    engine_backup = self.engines[session_id]
                     del self.engines[session_id]
                 if session_id in self.session_makers:
+                    session_maker_backup = self.session_makers[session_id]
                     del self.session_makers[session_id]
 
-                # Remove existing database file
-                db_path = self.get_session_db_path(session_id)
-                if os.path.exists(db_path):
-                    os.remove(db_path)
+                # Clear all data from existing tables
+                engine = create_engine(
+                    f"sqlite:///{db_path}", connect_args={"check_same_thread": False}, poolclass=StaticPool
+                )
 
-                # Recreate session with fresh data
-                self.create_session(session_id)
+                # Drop all tables and recreate them
+                Base.metadata.drop_all(bind=engine)
+                Base.metadata.create_all(bind=engine)
+
+                # Store engine and session maker
+                self.engines[session_id] = engine
+                self.session_makers[session_id] = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+                # Re-initialize with seed data
+                self._initialize_session_data(session_id)
+
+                # Update last accessed time
+                if session_id in self.active_sessions:
+                    self.active_sessions[session_id]["last_accessed"] = datetime.now()
+
                 return True
 
         except Exception as e:
