@@ -6,7 +6,6 @@ import { TestFlow, ValidationResult, BulkValidationResult } from '../types/flows
 const Validation = () => {
   const { currentSession } = useSession();
   const [flows, setFlows] = useState<TestFlow[]>([]);
-  const [loading, setLoading] = useState(false);
   const [validationResults, setValidationResults] = useState<Record<string, ValidationResult>>({});
   const [bulkValidationResult, setBulkValidationResult] = useState<BulkValidationResult | null>(null);
   const [selectedFlow, setSelectedFlow] = useState<string>('');

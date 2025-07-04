@@ -35,33 +35,42 @@ rl-gym/
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Python 3.8+
-- Node.js 16+
-- npm or yarn
+### Option 1: Docker (Recommended)
 
-### 1. Start the Backend
+**Prerequisites**: Docker and Docker Compose
 
+```bash
+git clone <repository-url>
+cd rl-gym
+docker-compose up --build
+```
+
+**Services:**
+- Frontend: http://localhost:3000
+- Backend: http://localhost:8000
+- API Docs: http://localhost:8000/docs
+
+For detailed Docker instructions, see [DOCKER.md](DOCKER.md)
+
+### Option 2: Manual Setup
+
+**Prerequisites**: Python 3.8+, Node.js 16+
+
+#### 1. Start the Backend
 ```bash
 cd backend
 pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Backend will be available at `http://localhost:8000`
-
-### 2. Start the Frontend
-
+#### 2. Start the Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Frontend will be available at `http://localhost:3000`
-
-### 3. Access the Dashboard
-
+#### 3. Access the Dashboard
 1. Open `http://localhost:3000` in your browser
 2. Create a new session or input an existing session ID
 3. Browse test flows and start testing!
@@ -86,36 +95,40 @@ Frontend will be available at `http://localhost:3000`
 ## 🤖 Claude Configuration
 
 ### MCP Server Integration
-This project includes an MCP (Model Context Protocol) server that provides Claude with direct access to the SP-API testing framework.
+This project includes a local MCP (Model Context Protocol) server that provides Claude with direct access to the SP-API testing framework through stdio transport.
 
-#### MCP Server Setup
-The MCP server (`mcp_server.py`) provides the following tools for Claude:
+#### MCP Server Features
+- **Local Deployment**: Runs as a local Python process for optimal Claude integration
+- **Session Management**: Create and manage isolated testing sessions
+- **Stdio Transport**: Direct communication with Claude via standard input/output
+- **Simplified Setup**: No containerization complexity, just local Python execution
+- **Reliable Communication**: Direct stdio connection eliminates network issues
+
+#### Available MCP Tools
 - **get_listing_item**: Get details about specific listings
 - **create_or_update_listing**: Create or fully update listings
 - **update_listing_partial**: Partially update existing listings
 - **delete_listing_item**: Delete/deactivate listings
 - **search_listings**: Search for listings with filters
 
-#### Claude Integration Workflow
-1. **Session Creation**: Claude can create isolated testing sessions
-2. **API Operations**: Claude can perform all SP-API operations through MCP tools
-3. **Validation**: Use the frontend to validate Claude's actions
-4. **Testing Flows**: Claude can execute predefined test scenarios
+#### Quick MCP Setup
+1. **Start Docker services** (backend and frontend):
+   ```bash
+   docker-compose up --build
+   ```
 
-#### MCP Server Configuration
-```json
-{
-  "mcpServers": {
-    "amazon-sp-api-mock": {
-      "command": "/path/to/python",
-      "args": ["/path/to/rl-gym/mcp_server.py"],
-      "disabled": false,
-      "alwaysAllow": [],
-      "disabledTools": []
-    }
-  }
-}
-```
+2. **Configure Claude** using the provided configuration:
+   ```bash
+   cp claude_mcp_config.json ~/.config/claude-desktop/
+   ```
+
+For detailed MCP setup instructions, see [`CLAUDE_MCP_SETUP.md`](CLAUDE_MCP_SETUP.md).
+
+#### Claude Integration Workflow
+1. **API Operations**: Claude performs all SP-API operations through MCP tools
+2. **Validation**: Use the frontend dashboard to validate Claude's actions
+3. **Testing Flows**: Claude executes predefined test scenarios
+4. **Database Reset**: Use the frontend tools to reset database state between tests
 
 #### Example Claude Usage
 ```
@@ -173,14 +186,14 @@ Claude, please:
 ## 🧪 Testing with Claude
 
 ### Prerequisites for Claude Integration
-1. **MCP Server Running**: Ensure the MCP server is configured and running
+1. **MCP Server Configured**: Ensure Claude is configured with the local MCP server
 2. **Backend Active**: FastAPI server must be running on port 8000
 3. **Frontend Available**: React dashboard should be accessible on port 3000
 
 ### Claude Testing Workflow
-1. **Session Setup**:
+1. **Direct API Operations**:
    ```
-   Claude, create a new testing session for SP-API testing
+   Claude, search for listings with seller SELLER001
    ```
 
 2. **Execute Test Flows**:
@@ -200,9 +213,7 @@ Claude, please:
    - Run validation to verify Claude performed actions correctly
 
 4. **Database Reset**:
-   ```
-   Claude, reset the database to prepare for the next test
-   ```
+   Use the frontend dashboard tools to reset the database between tests.
 
 ### Available Test Scenarios
 - **Create Operations**: New product listings
@@ -225,16 +236,55 @@ Claude, please:
 - **Detailed Reports**: JSON validation results for debugging
 - **Performance Metrics**: Track success rates and response times
 
+## 🐳 Docker Deployment
+
+### Production Deployment
+```bash
+# Build and start all services
+docker-compose up --build -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+### Development with Docker
+```bash
+# Start development environment with hot reloading
+docker-compose -f docker-compose.dev.yml up --build
+
+# View development logs
+docker-compose -f docker-compose.dev.yml logs -f
+```
+
+### Docker Services
+- **Backend**: FastAPI server with SQLite database
+- **Frontend**: React app served by Nginx
+- **Networking**: Internal Docker network for service communication
+- **Volumes**: Persistent storage for database and sessions
+- **Health Checks**: Automatic service health monitoring
+
+### MCP Server (Local)
+- **Runtime**: Local Python process (not containerized)
+- **Transport**: stdio communication with Claude
+- **Configuration**: See `CLAUDE_MCP_SETUP.md` for setup details
+
+For complete Docker documentation, see [DOCKER.md](DOCKER.md)
+
 ## 🛠️ Development
 
-### Backend Development
+### Manual Development Setup
+
+#### Backend Development
 ```bash
 cd backend
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-### Frontend Development
+#### Frontend Development
 ```bash
 cd frontend
 npm install
@@ -250,6 +300,16 @@ python -m pytest
 # Frontend tests
 cd frontend
 npm test
+```
+
+### Docker Development
+```bash
+# Development with hot reloading
+docker-compose -f docker-compose.dev.yml up
+
+# Execute commands in containers
+docker-compose exec backend bash
+docker-compose exec frontend sh
 ```
 
 ## 📊 Session Management

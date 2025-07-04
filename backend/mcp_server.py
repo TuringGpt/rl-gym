@@ -8,6 +8,7 @@ by making HTTP requests to the FastAPI server.
 
 import asyncio
 import json
+import os
 import sys
 from typing import Any, Dict, List, Optional
 
@@ -23,7 +24,7 @@ print(f"Python executable: {sys.executable}", file=sys.stderr)
 print(f"Working directory: {sys.path[0]}", file=sys.stderr)
 
 # Configuration
-FASTAPI_BASE_URL = "http://localhost:8000"
+FASTAPI_BASE_URL = os.getenv("FASTAPI_BASE_URL", "http://localhost:8000")
 
 # Create MCP server
 server = Server("amazon-sp-api-mock")
@@ -377,9 +378,56 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
 
 async def main():
     """Main entry point"""
-    # Run the server using stdio transport
-    async with stdio_server() as (read_stream, write_stream):
-        await server.run(read_stream, write_stream, server.create_initialization_options())
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Amazon SP-API Mock MCP Server")
+    parser.add_argument("--host", default="127.0.0.1", help="Host to bind to (for HTTP mode)")
+    parser.add_argument("--port", type=int, default=8001, help="Port to bind to (for HTTP mode)")
+    parser.add_argument("--mode", choices=["stdio", "http"], default="stdio", help="Server mode")
+
+    args = parser.parse_args()
+
+    if args.mode == "http":
+        # HTTP/SSE mode for containerized deployment
+        from mcp.server.sse import SseServerTransport
+        from starlette.applications import Starlette
+        from starlette.routing import Route
+        import uvicorn
+
+        print(f"Starting MCP server in HTTP mode on {args.host}:{args.port}", file=sys.stderr)
+
+        # Create SSE transport
+        sse = SseServerTransport("/messages")
+
+        async def handle_sse(request):
+            from starlette.responses import StreamingResponse
+
+            async def generate():
+                async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
+                    await server.run(streams[0], streams[1], server.create_initialization_options())
+
+            return StreamingResponse(generate(), media_type="text/event-stream")
+
+        async def handle_messages(request):
+            async with sse.connect_post(request.scope, request.receive, request._send) as streams:
+                await server.run(streams[0], streams[1], server.create_initialization_options())
+
+        app = Starlette(
+            routes=[
+                Route("/sse", handle_sse),
+                Route("/messages", handle_messages, methods=["POST"]),
+            ]
+        )
+
+        # Run with uvicorn
+        config = uvicorn.Config(app=app, host=args.host, port=args.port, log_level="info")
+        server_instance = uvicorn.Server(config)
+        await server_instance.serve()
+    else:
+        # Stdio mode for local development
+        print("Starting MCP server in stdio mode", file=sys.stderr)
+        async with stdio_server() as (read_stream, write_stream):
+            await server.run(read_stream, write_stream, server.create_initialization_options())
 
 
 if __name__ == "__main__":
