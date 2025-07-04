@@ -1,8 +1,13 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+
+# Load environment variables at startup
+load_dotenv()
 
 from app.testing.test_router import test_router
+from app.chat.router import chat_router
 
 from .database import engine, Base
 from .routers import router
@@ -55,6 +60,7 @@ app.add_middleware(
 app.include_router(session_router, tags=["Session Management"])
 app.include_router(router, tags=["Listings Items"])
 app.include_router(test_router, tags=["Testing"])
+app.include_router(chat_router, tags=["Chat"])
 
 
 @app.get("/")

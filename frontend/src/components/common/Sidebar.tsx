@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: '🏠' },
+  { name: 'AI Chat', href: '/chat', icon: '💬' },
   { name: 'Test Flows', href: '/flows', icon: '🔄' },
   { name: 'Validation', href: '/validation', icon: '✅' },
   { name: 'Database', href: '/database', icon: '🗄️' },

@@ -197,7 +197,16 @@ const Dashboard = () => {
       {/* Quick Actions */}
       <div className="card">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <a
+            href="/chat"
+            className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-center dark:border-gray-600 dark:hover:bg-gray-700"
+          >
+            <div className="text-2xl mb-2">💬</div>
+            <div className="font-medium text-gray-900 dark:text-gray-100">AI Chat</div>
+            <div className="text-sm text-gray-600 dark:text-gray-300">Chat with AI using MCP tools</div>
+          </a>
+
           <a
             href="/flows"
             className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-center dark:border-gray-600 dark:hover:bg-gray-700"

@@ -8,6 +8,7 @@ import sqlite3
 import uuid
 import shutil
 import subprocess
+import tempfile
 from typing import Dict, List, Optional, Set
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
@@ -163,17 +164,20 @@ sqlite3.connect = session_connect
 create_comprehensive_sample_data()
 """
 
-            # Write temporary script
-            temp_script_path = f"temp_seed_{session_id}.py"
-            with open(temp_script_path, "w") as f:
-                f.write(temp_script)
+            # Write temporary script to system temp directory to avoid triggering file watcher
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".py", prefix=f"temp_seed_{session_id}_", delete=False
+            ) as temp_file:
+                temp_file.write(temp_script)
+                temp_script_path = temp_file.name
 
-            # Execute the temporary script
-            result = subprocess.run(["python", temp_script_path], capture_output=True, text=True, cwd=".")
-
-            # Clean up temporary script
-            if os.path.exists(temp_script_path):
-                os.remove(temp_script_path)
+            try:
+                # Execute the temporary script
+                result = subprocess.run(["python", temp_script_path], capture_output=True, text=True, cwd=".")
+            finally:
+                # Clean up temporary script
+                if os.path.exists(temp_script_path):
+                    os.remove(temp_script_path)
 
             if result.returncode != 0:
                 raise Exception(f"Seed script failed: {result.stderr}")

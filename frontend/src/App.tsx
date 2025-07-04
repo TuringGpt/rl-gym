@@ -8,6 +8,7 @@ import Flows from './pages/Flows';
 import Validation from './pages/Validation';
 import Database from './pages/Database';
 import Tools from './pages/Tools';
+import Chat from './pages/Chat';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -32,6 +33,7 @@ function App() {
                 <Route path="/validation" element={<Validation />} />
                 <Route path="/database" element={<Database />} />
                 <Route path="/tools" element={<Tools />} />
+                <Route path="/chat" element={<Chat />} />
               </Routes>
             </Layout>
           </Router>
