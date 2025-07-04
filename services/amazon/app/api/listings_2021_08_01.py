@@ -125,8 +125,9 @@ async def put_listings_item(
     sellerId: str = FastAPIPath(..., description="Seller identifier"),
     sku: str = FastAPIPath(..., description="SKU"),
     db: Session = Depends(get_db),
-    marketplaceIds: str = None,
-    issueLocale: Optional[str] = None
+    marketplaceIds: str = Query(None, description="Comma-separated list of marketplace IDs"),
+    includedData: Optional[str] = Query(None, description="A list of data sets to include"),
+    issueLocale: Optional[str] = Query(None, description="A locale for localization of issues")
 ):
     """Create or update a listing."""
     
@@ -136,10 +137,15 @@ async def put_listings_item(
         sku=sku,
         product_type=listing_data.productType,
         attributes=listing_data.attributes,
-        marketplace_ids=marketplaceIds.split(",") if marketplaceIds else None
+        marketplace_ids=marketplaceIds.split(",") if marketplaceIds else ["ATVPDKIKX0DER"]
     )
     
-    return amazon_formatter.listings_response(result)
+    return {
+        "sku": sku,
+        "status": "ACCEPTED",
+        "submissionId": result.get("submission_id"),
+        "issues": []
+    }
 
 @router.get("/items/{sellerId}/{sku}")
 async def get_listings_item(
@@ -147,17 +153,18 @@ async def get_listings_item(
     sellerId: str = FastAPIPath(..., description="Seller identifier"),
     sku: str = FastAPIPath(..., description="SKU"),
     db: Session = Depends(get_db),
-    marketplaceIds: str = None,
-    includedData: Optional[str] = None,
-    issueLocale: Optional[str] = None
+    marketplaceIds: str = Query(None, description="Comma-separated list of marketplace IDs"),
+    includedData: Optional[str] = Query(None, description="A list of data sets to include"),
+    issueLocale: Optional[str] = Query(None, description="A locale for localization of issues")
 ):
     """Get listing details."""
     
     listing_service = ListingService(db)
-    listing = await listing_service.get_listing(
+    listing = await listing_service.get_listing_detailed(
         seller_id=sellerId,
         sku=sku,
-        marketplace_ids=marketplaceIds.split(",") if marketplaceIds else None
+        marketplace_ids=marketplaceIds.split(",") if marketplaceIds else ["ATVPDKIKX0DER"],
+        included_data=includedData.split(",") if includedData else ["summaries"]
     )
     
     if not listing:
@@ -169,12 +176,7 @@ async def get_listings_item(
             ).body.decode()
         )
     
-    return {
-        "sku": sku,
-        "status": listing.get("status", "ACTIVE"),
-        "attributeSets": listing.get("attribute_sets", []),
-        "issues": listing.get("issues", [])
-    }
+    return listing
 
 @router.delete("/items/{sellerId}/{sku}")
 async def delete_listings_item(
@@ -182,8 +184,8 @@ async def delete_listings_item(
     sellerId: str = FastAPIPath(..., description="Seller identifier"),
     sku: str = FastAPIPath(..., description="SKU"),
     db: Session = Depends(get_db),
-    marketplaceIds: str = None,
-    issueLocale: Optional[str] = None
+    marketplaceIds: str = Query(None, description="Comma-separated list of marketplace IDs"),
+    issueLocale: Optional[str] = Query(None, description="A locale for localization of issues")
 ):
     """Delete a listing."""
     
@@ -191,7 +193,7 @@ async def delete_listings_item(
     result = await listing_service.delete_listing(
         seller_id=sellerId,
         sku=sku,
-        marketplace_ids=marketplaceIds.split(",") if marketplaceIds else None
+        marketplace_ids=marketplaceIds.split(",") if marketplaceIds else ["ATVPDKIKX0DER"]
     )
     
     if not result:
@@ -205,7 +207,7 @@ async def delete_listings_item(
     
     return {
         "sku": sku,
-        "status": "DELETED",
+        "status": "ACCEPTED",
         "submissionId": result.get("submission_id"),
         "issues": []
     }
@@ -217,9 +219,9 @@ async def patch_listings_item(
     sellerId: str = FastAPIPath(..., description="Seller identifier"),
     sku: str = FastAPIPath(..., description="SKU"),
     db: Session = Depends(get_db),
-    marketplaceIds: str = None,
-    includedData: Optional[str] = None,
-    issueLocale: Optional[str] = None
+    marketplaceIds: str = Query(None, description="Comma-separated list of marketplace IDs"),
+    includedData: Optional[str] = Query(None, description="A list of data sets to include"),
+    issueLocale: Optional[str] = Query(None, description="A locale for localization of issues")
 ):
     """Partially update a listing."""
     
@@ -228,14 +230,14 @@ async def patch_listings_item(
         seller_id=sellerId,
         sku=sku,
         patches=patch_data.patches,
-        marketplace_ids=marketplaceIds.split(",") if marketplaceIds else None
+        marketplace_ids=marketplaceIds.split(",") if marketplaceIds else ["ATVPDKIKX0DER"]
     )
     
     return {
         "sku": sku,
-        "status": result.get("status", "ACCEPTED"),
+        "status": "ACCEPTED",
         "submissionId": result.get("submission_id"),
-        "issues": result.get("issues", [])
+        "issues": []
     }
 
 @router.get("/items/{sellerId}", response_model=SearchListingsResponse)
