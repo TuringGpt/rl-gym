@@ -65,12 +65,12 @@ const Dashboard = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
         <div className="flex items-center space-x-2">
           <div className={`w-3 h-3 rounded-full ${backendStatus === 'online' ? 'bg-success-500' :
             backendStatus === 'offline' ? 'bg-error-500' : 'bg-warning-500'
             }`}></div>
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-gray-600 dark:text-gray-300">
             Backend: {backendStatus === 'checking' ? 'Checking...' : backendStatus}
           </span>
         </div>
@@ -79,17 +79,17 @@ const Dashboard = () => {
       {/* Session Management */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Session Management</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Session Management</h2>
 
           {currentSession ? (
             <div className="space-y-4">
-              <div className="p-4 bg-success-50 border border-success-200 rounded-lg">
+              <div className="p-4 bg-success-50 border border-success-200 rounded-lg dark:bg-green-900/20 dark:border-green-400">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-success-800">Active Session</p>
-                    <p className="text-lg font-mono text-success-900">{currentSession}</p>
+                    <p className="text-sm font-medium text-success-800 dark:text-green-300">Active Session</p>
+                    <p className="text-lg font-mono text-success-900 dark:text-green-200">{currentSession}</p>
                   </div>
-                  <div className="w-3 h-3 bg-success-500 rounded-full"></div>
+                  <div className="w-3 h-3 bg-success-500 rounded-full dark:bg-green-400"></div>
                 </div>
               </div>
 
@@ -102,9 +102,9 @@ const Dashboard = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="p-4 bg-warning-50 border border-warning-200 rounded-lg">
-                <p className="text-sm text-warning-800">No active session</p>
-                <p className="text-xs text-warning-600 mt-1">
+              <div className="p-4 bg-warning-50 border border-warning-200 rounded-lg dark:bg-gray-700 dark:border-gray-500">
+                <p className="text-sm text-warning-800 dark:text-gray-200">No active session</p>
+                <p className="text-xs text-warning-600 dark:text-gray-300 mt-1">
                   Create a new session or input an existing session ID to get started
                 </p>
               </div>
@@ -120,10 +120,10 @@ const Dashboard = () => {
 
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-300" />
+                    <div className="w-full border-t border-gray-300 dark:border-gray-500" />
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-white text-gray-500">or</span>
+                    <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-300">or</span>
                   </div>
                 </div>
 
@@ -144,50 +144,50 @@ const Dashboard = () => {
           )}
 
           {error && (
-            <div className="mt-4 p-3 bg-error-50 border border-error-200 rounded-lg">
-              <p className="text-sm text-error-800">{error}</p>
+            <div className="mt-4 p-3 bg-error-50 border border-error-200 rounded-lg dark:bg-gray-700 dark:border-gray-500">
+              <p className="text-sm text-error-800 dark:text-gray-200">{error}</p>
             </div>
           )}
         </div>
 
         {/* Quick Stats */}
         <div className="card">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Stats</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Quick Stats</h2>
 
           {currentSession && dbState ? (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-3 bg-primary-50 rounded-lg">
-                  <div className="text-2xl font-bold text-primary-900">{dbState.total_listings}</div>
-                  <div className="text-sm text-primary-600">Total Listings</div>
+                <div className="text-center p-3 bg-primary-50 rounded-lg dark:bg-blue-900/20 dark:border dark:border-blue-400">
+                  <div className="text-2xl font-bold text-primary-900 dark:text-blue-300">{dbState.total_listings}</div>
+                  <div className="text-sm text-primary-600 dark:text-blue-200">Total Listings</div>
                 </div>
-                <div className="text-center p-3 bg-success-50 rounded-lg">
-                  <div className="text-2xl font-bold text-success-900">{dbState.active_listings}</div>
-                  <div className="text-sm text-success-600">Active</div>
+                <div className="text-center p-3 bg-success-50 rounded-lg dark:bg-green-900/20 dark:border dark:border-green-400">
+                  <div className="text-2xl font-bold text-success-900 dark:text-green-300">{dbState.active_listings}</div>
+                  <div className="text-sm text-success-600 dark:text-green-200">Active</div>
                 </div>
-                <div className="text-center p-3 bg-error-50 rounded-lg">
-                  <div className="text-2xl font-bold text-error-900">{dbState.inactive_listings}</div>
-                  <div className="text-sm text-error-600">Inactive</div>
+                <div className="text-center p-3 bg-error-50 rounded-lg dark:bg-red-900/20 dark:border dark:border-red-400">
+                  <div className="text-2xl font-bold text-error-900 dark:text-red-300">{dbState.inactive_listings}</div>
+                  <div className="text-sm text-error-600 dark:text-red-200">Inactive</div>
                 </div>
-                <div className="text-center p-3 bg-warning-50 rounded-lg">
-                  <div className="text-2xl font-bold text-warning-900">{Object.keys(dbState.seller_counts || {}).length}</div>
-                  <div className="text-sm text-warning-600">Sellers</div>
+                <div className="text-center p-3 bg-warning-50 rounded-lg dark:bg-yellow-900/20 dark:border dark:border-yellow-400">
+                  <div className="text-2xl font-bold text-warning-900 dark:text-yellow-300">{Object.keys(dbState.seller_counts || {}).length}</div>
+                  <div className="text-sm text-warning-600 dark:text-yellow-200">Sellers</div>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-gray-200">
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-600">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Avg Price:</span>
-                  <span className="font-medium">${dbState.price_stats?.avg_price?.toFixed(2) || '0.00'}</span>
+                  <span className="text-gray-600 dark:text-gray-300">Avg Price:</span>
+                  <span className="font-medium dark:text-gray-100">${dbState.price_stats?.avg_price?.toFixed(2) || '0.00'}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Total Inventory:</span>
-                  <span className="font-medium">{dbState.total_inventory?.toLocaleString() || '0'}</span>
+                  <span className="text-gray-600 dark:text-gray-300">Total Inventory:</span>
+                  <span className="font-medium dark:text-gray-100">{dbState.total_inventory?.toLocaleString() || '0'}</span>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               <p>Create or select a session to view statistics</p>
             </div>
           )}
@@ -196,42 +196,42 @@ const Dashboard = () => {
 
       {/* Quick Actions */}
       <div className="card">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <a
             href="/flows"
-            className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-center"
+            className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-center dark:border-gray-600 dark:hover:bg-gray-700"
           >
             <div className="text-2xl mb-2">🔄</div>
-            <div className="font-medium text-gray-900">View Test Flows</div>
-            <div className="text-sm text-gray-600">Browse available test scenarios</div>
+            <div className="font-medium text-gray-900 dark:text-gray-100">View Test Flows</div>
+            <div className="text-sm text-gray-600 dark:text-gray-300">Browse available test scenarios</div>
           </a>
 
           <a
             href="/validation"
-            className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-center"
+            className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-center dark:border-gray-600 dark:hover:bg-gray-700"
           >
             <div className="text-2xl mb-2">✅</div>
-            <div className="font-medium text-gray-900">Run Validation</div>
-            <div className="text-sm text-gray-600">Validate test flow results</div>
+            <div className="font-medium text-gray-900 dark:text-gray-100">Run Validation</div>
+            <div className="text-sm text-gray-600 dark:text-gray-300">Validate test flow results</div>
           </a>
 
           <a
             href="/database"
-            className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-center"
+            className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-center dark:border-gray-600 dark:hover:bg-gray-700"
           >
             <div className="text-2xl mb-2">🗄️</div>
-            <div className="font-medium text-gray-900">Database State</div>
-            <div className="text-sm text-gray-600">View current data state</div>
+            <div className="font-medium text-gray-900 dark:text-gray-100">Database State</div>
+            <div className="text-sm text-gray-600 dark:text-gray-300">View current data state</div>
           </a>
 
           <a
             href="/tools"
-            className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-center"
+            className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-center dark:border-gray-600 dark:hover:bg-gray-700"
           >
             <div className="text-2xl mb-2">🛠️</div>
-            <div className="font-medium text-gray-900">Tools</div>
-            <div className="text-sm text-gray-600">Reset database & utilities</div>
+            <div className="font-medium text-gray-900 dark:text-gray-100">Tools</div>
+            <div className="text-sm text-gray-600 dark:text-gray-300">Reset database & utilities</div>
           </a>
         </div>
       </div>

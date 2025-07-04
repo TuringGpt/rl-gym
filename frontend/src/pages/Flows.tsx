@@ -113,13 +113,13 @@ const Flows = () => {
 
   const getCategoryColor = (category: string): string => {
     switch (category) {
-      case 'create': return 'bg-success-100 text-success-800';
-      case 'update': return 'bg-primary-100 text-primary-800';
-      case 'delete': return 'bg-error-100 text-error-800';
-      case 'search': return 'bg-warning-100 text-warning-800';
-      case 'bulk': return 'bg-purple-100 text-purple-800';
-      case 'analysis': return 'bg-indigo-100 text-indigo-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'create': return 'bg-success-100 text-success-800 dark:bg-green-600 dark:text-white';
+      case 'update': return 'bg-primary-100 text-primary-800 dark:bg-blue-600 dark:text-white';
+      case 'delete': return 'bg-error-100 text-error-800 dark:bg-red-600 dark:text-white';
+      case 'search': return 'bg-warning-100 text-warning-800 dark:bg-yellow-600 dark:text-black';
+      case 'bulk': return 'bg-purple-100 text-purple-800 dark:bg-purple-600 dark:text-white';
+      case 'analysis': return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-600 dark:text-white';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-white';
     }
   };
 
@@ -128,7 +128,7 @@ const Flows = () => {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading test flows...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-300">Loading test flows...</p>
         </div>
       </div>
     );
@@ -139,8 +139,8 @@ const Flows = () => {
       <div className="card">
         <div className="text-center py-8">
           <div className="text-error-500 text-4xl mb-4">⚠️</div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Failed to Load Test Flows</h3>
-          <p className="text-gray-600 mb-4">{error}</p>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Failed to Load Test Flows</h3>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">{error}</p>
           <button onClick={loadFlows} className="btn-primary">
             Try Again
           </button>
@@ -152,19 +152,19 @@ const Flows = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Test Flows</h1>
-        <div className="text-sm text-gray-600">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Test Flows</h1>
+        <div className="text-sm text-gray-600 dark:text-gray-300">
           {filteredFlows.length} of {flows.length} flows
         </div>
       </div>
 
       {!currentSession && (
-        <div className="card bg-warning-50 border-warning-200">
+        <div className="card bg-warning-50 border-warning-200 dark:bg-gray-700 dark:border-gray-500">
           <div className="flex items-center space-x-3">
             <div className="text-warning-500 text-xl">⚠️</div>
             <div>
-              <p className="font-medium text-warning-800">No Active Session</p>
-              <p className="text-sm text-warning-600">
+              <p className="font-medium text-warning-800 dark:text-gray-200">No Active Session</p>
+              <p className="text-sm text-warning-600 dark:text-gray-300">
                 Create a session from the Dashboard to validate test flows
               </p>
             </div>
@@ -176,7 +176,7 @@ const Flows = () => {
       <div className="card">
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Search flows
             </label>
             <input
@@ -189,7 +189,7 @@ const Flows = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Filter by category
             </label>
             <div className="flex flex-wrap gap-2">
@@ -198,8 +198,8 @@ const Flows = () => {
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
                   className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${selectedCategory === category.id
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-primary-600 text-white dark:bg-gray-100 dark:text-gray-900'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
                     }`}
                 >
                   <span className="mr-1">{category.icon}</span>
@@ -225,7 +225,7 @@ const Flows = () => {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">{flow.name}</h3>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{flow.name}</h3>
                       <span className={`badge ${getCategoryColor(category)}`}>
                         {category}
                       </span>
@@ -236,32 +236,32 @@ const Flows = () => {
                       )}
                     </div>
                     <div className="flex items-center space-x-2 mb-2">
-                      <span className="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                      <span className="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded dark:bg-gray-600 dark:text-gray-200">
                         {flow.id}
                       </span>
                     </div>
-                    <p className="text-gray-600 text-sm">{flow.description}</p>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm">{flow.description}</p>
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   <div>
                     <div className="mb-2">
-                      <label className="text-sm font-medium text-gray-700">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         Claude Instruction
                       </label>
                     </div>
-                    <div className={`bg-gray-50 rounded-lg p-3 text-sm font-mono ${isExpanded ? '' : 'max-h-20 overflow-hidden relative'
+                    <div className={`bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-sm font-mono dark:text-gray-200 ${isExpanded ? '' : 'max-h-20 overflow-hidden relative'
                       }`}>
                       {flow.claude_instruction}
                       {!isExpanded && flow.claude_instruction.length > 100 && (
-                        <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-gray-50 to-transparent"></div>
+                        <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-gray-50 to-transparent dark:from-gray-700"></div>
                       )}
                     </div>
                     {flow.claude_instruction.length > 100 && (
                       <button
                         onClick={() => setExpandedFlow(isExpanded ? null : flow.id)}
-                        className="text-xs text-primary-600 hover:text-primary-800 mt-1"
+                        className="text-xs text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 mt-1"
                       >
                         {isExpanded ? 'Show less' : 'Show more'}
                       </button>
@@ -289,26 +289,26 @@ const Flows = () => {
                   {/* Validation Results */}
                   {validationResult && (
                     <div className={`mt-4 p-3 rounded-lg border ${validationResult.success
-                        ? 'border-success-200 bg-success-50'
-                        : 'border-error-200 bg-error-50'
+                      ? 'border-success-200 bg-success-50 dark:border-green-400 dark:bg-green-900/20'
+                      : 'border-error-200 bg-error-50 dark:border-red-400 dark:bg-red-900/20'
                       }`}>
                       <div className="flex items-center space-x-2 mb-2">
                         <span className="text-lg">{getStatusIcon(validationResult.success)}</span>
-                        <span className={`font-medium ${validationResult.success ? 'text-success-800' : 'text-error-800'
+                        <span className={`font-medium ${validationResult.success ? 'text-success-800 dark:text-green-300' : 'text-error-800 dark:text-red-300'
                           }`}>
                           {validationResult.success ? 'Validation Passed' : 'Validation Failed'}
                         </span>
                       </div>
-                      <p className={`text-sm ${validationResult.success ? 'text-success-700' : 'text-error-700'
+                      <p className={`text-sm ${validationResult.success ? 'text-success-700 dark:text-green-300' : 'text-error-700 dark:text-red-300'
                         }`}>
                         {validationResult.message}
                       </p>
                       {validationResult.validation_results && (
                         <details className="mt-2">
-                          <summary className="text-xs cursor-pointer text-gray-600 hover:text-gray-800">
+                          <summary className="text-xs cursor-pointer text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">
                             View Details
                           </summary>
-                          <pre className="mt-2 text-xs bg-white p-2 rounded border overflow-x-auto">
+                          <pre className="mt-2 text-xs bg-white dark:bg-gray-800 dark:text-gray-200 p-2 rounded border dark:border-gray-600 overflow-x-auto">
                             {JSON.stringify(validationResult.validation_results, null, 2)}
                           </pre>
                         </details>
@@ -325,8 +325,8 @@ const Flows = () => {
       {filteredFlows.length === 0 && (
         <div className="card text-center py-8">
           <div className="text-gray-400 text-4xl mb-4">🔍</div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No flows found</h3>
-          <p className="text-gray-600">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No flows found</h3>
+          <p className="text-gray-600 dark:text-gray-300">
             Try adjusting your search terms or category filter
           </p>
         </div>

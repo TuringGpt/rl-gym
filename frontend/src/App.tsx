@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SessionProvider } from './contexts/SessionContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import Layout from './components/common/Layout';
 import Dashboard from './pages/Dashboard';
 import Flows from './pages/Flows';
@@ -21,19 +22,21 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <SessionProvider>
-        <Router>
-          <Layout>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/flows" element={<Flows />} />
-              <Route path="/validation" element={<Validation />} />
-              <Route path="/database" element={<Database />} />
-              <Route path="/tools" element={<Tools />} />
-            </Routes>
-          </Layout>
-        </Router>
-      </SessionProvider>
+      <ThemeProvider>
+        <SessionProvider>
+          <Router>
+            <Layout>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/flows" element={<Flows />} />
+                <Route path="/validation" element={<Validation />} />
+                <Route path="/database" element={<Database />} />
+                <Route path="/tools" element={<Tools />} />
+              </Routes>
+            </Layout>
+          </Router>
+        </SessionProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

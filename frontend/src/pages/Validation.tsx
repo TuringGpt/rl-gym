@@ -89,8 +89,8 @@ const Validation = () => {
 
     return (
       <div className="mt-4 space-y-2">
-        <h4 className="font-medium text-gray-900">Validation Details:</h4>
-        <pre className="bg-gray-50 p-3 rounded text-xs overflow-x-auto">
+        <h4 className="font-medium text-gray-900 dark:text-gray-100">Validation Details:</h4>
+        <pre className="bg-gray-50 dark:bg-gray-700 dark:text-gray-200 p-3 rounded text-xs overflow-x-auto">
           {JSON.stringify(result.validation_results, null, 2)}
         </pre>
       </div>
@@ -100,12 +100,12 @@ const Validation = () => {
   if (!currentSession) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-gray-900">Validation</h1>
-        <div className="card bg-warning-50 border-warning-200">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Validation</h1>
+        <div className="card bg-warning-50 border-warning-200 dark:bg-gray-700 dark:border-gray-500">
           <div className="text-center py-8">
             <div className="text-warning-500 text-4xl mb-4">⚠️</div>
-            <h3 className="text-lg font-medium text-warning-800 mb-2">No Active Session</h3>
-            <p className="text-warning-600 mb-4">
+            <h3 className="text-lg font-medium text-warning-800 dark:text-gray-200 mb-2">No Active Session</h3>
+            <p className="text-warning-600 dark:text-gray-300 mb-4">
               You need an active session to validate test flows. Please create or select a session from the Dashboard.
             </p>
             <a href="/" className="btn-primary">
@@ -120,10 +120,10 @@ const Validation = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Validation</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Validation</h1>
         <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-600">Session:</span>
-          <span className="px-2 py-1 bg-primary-100 text-primary-800 rounded text-sm font-mono">
+          <span className="text-sm text-gray-600 dark:text-gray-300">Session:</span>
+          <span className="px-2 py-1 bg-primary-100 text-primary-800 rounded text-sm font-mono dark:bg-blue-900/30 dark:text-blue-200 dark:border dark:border-blue-400">
             {currentSession}
           </span>
         </div>
@@ -132,7 +132,7 @@ const Validation = () => {
       {/* Bulk Validation */}
       <div className="card">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">Bulk Validation</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Bulk Validation</h2>
           <button
             onClick={validateAllFlows}
             disabled={bulkValidating}
@@ -145,29 +145,29 @@ const Validation = () => {
         {bulkValidationResult && (
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="text-center p-3 bg-primary-50 rounded-lg">
-                <div className="text-2xl font-bold text-primary-900">
+              <div className="text-center p-3 bg-primary-50 rounded-lg dark:bg-blue-900/20 dark:border dark:border-blue-400">
+                <div className="text-2xl font-bold text-primary-900 dark:text-blue-300">
                   {bulkValidationResult.summary.total_flows}
                 </div>
-                <div className="text-sm text-primary-600">Total Flows</div>
+                <div className="text-sm text-primary-600 dark:text-blue-200">Total Flows</div>
               </div>
-              <div className="text-center p-3 bg-success-50 rounded-lg">
-                <div className="text-2xl font-bold text-success-900">
+              <div className="text-center p-3 bg-success-50 rounded-lg dark:bg-green-900/20 dark:border dark:border-green-400">
+                <div className="text-2xl font-bold text-success-900 dark:text-green-300">
                   {bulkValidationResult.summary.passed}
                 </div>
-                <div className="text-sm text-success-600">Passed</div>
+                <div className="text-sm text-success-600 dark:text-green-200">Passed</div>
               </div>
-              <div className="text-center p-3 bg-error-50 rounded-lg">
-                <div className="text-2xl font-bold text-error-900">
+              <div className="text-center p-3 bg-error-50 rounded-lg dark:bg-red-900/20 dark:border dark:border-red-400">
+                <div className="text-2xl font-bold text-error-900 dark:text-red-300">
                   {bulkValidationResult.summary.failed}
                 </div>
-                <div className="text-sm text-error-600">Failed</div>
+                <div className="text-sm text-error-600 dark:text-red-200">Failed</div>
               </div>
-              <div className="text-center p-3 bg-warning-50 rounded-lg">
-                <div className="text-2xl font-bold text-warning-900">
+              <div className="text-center p-3 bg-warning-50 rounded-lg dark:bg-yellow-900/20 dark:border dark:border-yellow-400">
+                <div className="text-2xl font-bold text-warning-900 dark:text-yellow-300">
                   {bulkValidationResult.summary.success_rate}
                 </div>
-                <div className="text-sm text-warning-600">Success Rate</div>
+                <div className="text-sm text-warning-600 dark:text-yellow-200">Success Rate</div>
               </div>
             </div>
           </div>
@@ -176,11 +176,11 @@ const Validation = () => {
 
       {/* Individual Flow Validation */}
       <div className="card">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Individual Flow Validation</h2>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Individual Flow Validation</h2>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Select a flow to validate
             </label>
             <select
@@ -220,7 +220,7 @@ const Validation = () => {
       {/* Validation Results */}
       {validationResults && Object.keys(validationResults).length > 0 && (
         <div className="card">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Validation Results</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Validation Results</h2>
 
           <div className="space-y-4">
             {Object.entries(validationResults).map(([flowId, result]) => {
@@ -231,15 +231,15 @@ const Validation = () => {
                 <div
                   key={flowId}
                   className={`border rounded-lg p-4 ${result.success
-                    ? 'border-success-200 bg-success-50'
-                    : 'border-error-200 bg-error-50'
+                    ? 'border-success-200 bg-success-50 dark:border-green-400 dark:bg-green-900/20'
+                    : 'border-error-200 bg-error-50 dark:border-red-400 dark:bg-red-900/20'
                     }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-2">
                         <span className="text-lg">{getStatusIcon(result.success)}</span>
-                        <h3 className="font-semibold text-gray-900">
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">
                           {flow?.name || flowId}
                         </h3>
                         <span className={`badge badge-${statusColor}`}>
@@ -247,13 +247,13 @@ const Validation = () => {
                         </span>
                       </div>
 
-                      <p className={`text-sm mb-2 ${result.success ? 'text-success-700' : 'text-error-700'
+                      <p className={`text-sm mb-2 ${result.success ? 'text-success-700 dark:text-green-300' : 'text-error-700 dark:text-red-300'
                         }`}>
                         {result.message}
                       </p>
 
                       {result.summary && (
-                        <div className="text-xs text-gray-600 space-y-1">
+                        <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
                           <div>Flow ID: {result.summary.flow_name}</div>
                           <div>Session: {result.summary.session_id}</div>
                         </div>
@@ -270,9 +270,9 @@ const Validation = () => {
       )}
 
       {/* Help Section */}
-      <div className="card bg-blue-50 border-blue-200">
-        <h2 className="text-lg font-semibold text-blue-900 mb-3">How to Use Validation</h2>
-        <div className="text-sm text-blue-800 space-y-2">
+      <div className="card bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-400">
+        <h2 className="text-lg font-semibold text-blue-900 dark:text-blue-300 mb-3">How to Use Validation</h2>
+        <div className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
           <p><strong>1.</strong> Choose a test flow from the dropdown or run bulk validation</p>
           <p><strong>2.</strong> Ask Claude to perform the action described in the flow's instruction</p>
           <p><strong>3.</strong> Click "Validate Flow" to check if Claude performed the action correctly</p>

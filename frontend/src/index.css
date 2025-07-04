@@ -8,7 +8,7 @@
   }
 
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100;
   }
 }
 
@@ -18,31 +18,31 @@
   }
 
   .btn-primary {
-    @apply btn bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+    @apply btn bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 dark:bg-blue-600 dark:text-white dark:hover:bg-blue-700 dark:focus:ring-blue-400;
   }
 
   .btn-secondary {
-    @apply btn bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500;
+    @apply btn bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 dark:focus:ring-gray-400;
   }
 
   .btn-success {
-    @apply btn bg-success-600 text-white hover:bg-success-700 focus:ring-success-500;
+    @apply btn bg-success-600 text-white hover:bg-success-700 focus:ring-success-500 dark:bg-green-600 dark:text-white dark:hover:bg-green-700 dark:focus:ring-green-400;
   }
 
   .btn-error {
-    @apply btn bg-error-600 text-white hover:bg-error-700 focus:ring-error-500;
+    @apply btn bg-error-600 text-white hover:bg-error-700 focus:ring-error-500 dark:bg-red-600 dark:text-white dark:hover:bg-red-700 dark:focus:ring-red-400;
   }
 
   .btn-warning {
-    @apply btn bg-warning-600 text-white hover:bg-warning-700 focus:ring-warning-500;
+    @apply btn bg-warning-600 text-white hover:bg-warning-700 focus:ring-warning-500 dark:bg-yellow-600 dark:text-black dark:hover:bg-yellow-700 dark:focus:ring-yellow-400;
   }
 
   .card {
-    @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6;
+    @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-600;
   }
 
   .input {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-500 dark:text-gray-100 dark:focus:ring-gray-400 dark:focus:border-gray-400;
   }
 
   .badge {
@@ -50,18 +50,18 @@
   }
 
   .badge-success {
-    @apply badge bg-success-100 text-success-800;
+    @apply badge bg-success-100 text-success-800 dark:bg-gray-100 dark:text-gray-900;
   }
 
   .badge-error {
-    @apply badge bg-error-100 text-error-800;
+    @apply badge bg-error-100 text-error-800 dark:bg-gray-700 dark:text-gray-100;
   }
 
   .badge-warning {
-    @apply badge bg-warning-100 text-warning-800;
+    @apply badge bg-warning-100 text-warning-800 dark:bg-gray-100 dark:text-gray-900;
   }
 
   .badge-info {
-    @apply badge bg-primary-100 text-primary-800;
+    @apply badge bg-primary-100 text-primary-800 dark:bg-gray-100 dark:text-gray-900;
   }
 }
