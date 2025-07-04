@@ -2,15 +2,32 @@
 Testing API endpoints for validation and reset functionality
 """
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query, Header
 from sqlalchemy.orm import Session
-from typing import Dict, List, Any
-from app.database import get_db
-from app.testing.test_flows import get_test_flow, get_all_test_flows, get_test_flow_list
+from typing import Dict, List, Any, Optional
+from app.testing.reset import backup_current_state, get_database_state, reset_database
+from app.testing.test_flows import get_all_test_flows, get_test_flow, get_test_flow_list
 from app.testing.validation import validate_flow
-from app.testing.reset import reset_database, get_database_state, backup_current_state
 
 test_router = APIRouter(prefix="/test", tags=["Testing"])
+
+
+def get_db_for_session(x_session_id: str = Header(..., alias="X-Session-ID")):
+    """Get database session for required session ID from header"""
+    from app.session_manager import session_manager
+
+    # Validate session exists
+    if not session_manager.session_exists(x_session_id):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid session ID: {x_session_id}. Please create a session first using POST /sessions",
+        )
+
+    db = session_manager.get_session_db(x_session_id)
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 @test_router.get("/flows", response_model=List[Dict[str, str]])
@@ -42,18 +59,22 @@ def get_test_flow_details(flow_id: str):
 
 
 @test_router.get("/validate/{flow_id}")
-def validate_test_flow(flow_id: str):
+def validate_test_flow(
+    flow_id: str, db: Session = Depends(get_db_for_session), x_session_id: str = Header(..., alias="X-Session-ID")
+):
     """
     Validate that a test flow was executed correctly
     Returns PASS/FAIL with detailed comparison results
+    Requires X-Session-ID header
     """
     try:
-        result = validate_flow(flow_id)
+        result = validate_flow(flow_id, x_session_id)
 
         # Add summary information
         result["summary"] = {
             "status": "PASS" if result["success"] else "FAIL",
             "flow_name": get_test_flow(flow_id)["name"] if get_test_flow(flow_id) else "Unknown",
+            "session_id": x_session_id,
             "timestamp": None,  # Could add timestamp if needed
         }
 
@@ -64,37 +85,83 @@ def validate_test_flow(flow_id: str):
 
 
 @test_router.post("/reset")
-def reset_test_database():
+def reset_test_database(
+    db: Session = Depends(get_db_for_session), x_session_id: str = Header(..., alias="X-Session-ID")
+):
     """
     Reset the database to its original seed state
     Use this between tests to ensure clean state
+    Requires X-Session-ID header
     """
     try:
-        result = reset_database()
+        # Reset specific session
+        from session_manager import session_manager
 
-        if not result["success"]:
-            raise HTTPException(status_code=500, detail=result["message"])
+        success = session_manager.reset_session(x_session_id)
+        if not success:
+            raise HTTPException(status_code=500, detail=f"Failed to reset session {x_session_id}")
 
-        return {"status": "success", "message": "Database reset to original seed state", "details": result["details"]}
+        return {
+            "status": "success",
+            "message": f"Session '{x_session_id}' reset to original seed state",
+            "session_id": x_session_id,
+        }
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to reset database: {str(e)}")
 
 
 @test_router.get("/state")
-def get_current_database_state():
+def get_current_database_state(
+    db: Session = Depends(get_db_for_session), x_session_id: str = Header(..., alias="X-Session-ID")
+):
     """
     Get current database state summary
     Useful for debugging and understanding current data
+    Requires X-Session-ID header
     """
     try:
-        result = get_database_state()
+        from models import ListingItem
+        from sqlalchemy import func
 
-        if not result["success"]:
-            raise HTTPException(status_code=500, detail=result["message"])
+        # Basic counts
+        total_count = db.query(ListingItem).count()
+        active_count = db.query(ListingItem).filter(ListingItem.status == "ACTIVE").count()
+        inactive_count = db.query(ListingItem).filter(ListingItem.status == "INACTIVE").count()
 
-        return result["state"]
+        # Count by seller
+        seller_counts = {}
+        sellers = db.query(ListingItem.seller_id, ListingItem.seller_name).distinct().all()
+        for seller_id, seller_name in sellers:
+            count = db.query(ListingItem).filter(ListingItem.seller_id == seller_id).count()
+            seller_counts[seller_id] = {"name": seller_name, "count": count}
 
+        # Price statistics
+        price_stats = db.query(
+            func.min(ListingItem.price), func.max(ListingItem.price), func.avg(ListingItem.price)
+        ).first()
+
+        # Total inventory
+        total_quantity = db.query(func.sum(ListingItem.quantity)).scalar() or 0
+
+        return {
+            "session_id": x_session_id,
+            "total_listings": total_count,
+            "active_listings": active_count,
+            "inactive_listings": inactive_count,
+            "seller_counts": seller_counts,
+            "price_stats": {
+                "min_price": float(price_stats[0]) if price_stats[0] else 0,
+                "max_price": float(price_stats[1]) if price_stats[1] else 0,
+                "avg_price": float(price_stats[2]) if price_stats[2] else 0,
+            },
+            "total_inventory": total_quantity,
+        }
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get database state: {str(e)}")
 
@@ -122,10 +189,13 @@ def backup_database():
 
 
 @test_router.get("/validate/all")
-def validate_all_flows():
+def validate_all_flows(
+    db: Session = Depends(get_db_for_session), x_session_id: str = Header(..., alias="X-Session-ID")
+):
     """
     Validate all test flows at once
     Useful for comprehensive testing
+    Requires X-Session-ID header
     """
     try:
         all_flows = get_all_test_flows()
@@ -133,7 +203,7 @@ def validate_all_flows():
 
         for flow_id in all_flows.keys():
             try:
-                results[flow_id] = validate_flow(flow_id)
+                results[flow_id] = validate_flow(flow_id, x_session_id)
             except Exception as e:
                 results[flow_id] = {
                     "success": False,
@@ -153,6 +223,7 @@ def validate_all_flows():
                 "passed": passed_flows,
                 "failed": failed_flows,
                 "success_rate": f"{(passed_flows/total_flows)*100:.1f}%" if total_flows > 0 else "0%",
+                "session_id": x_session_id,
             },
             "results": results,
         }
@@ -168,29 +239,38 @@ def get_testing_help():
     """
     return {
         "testing_workflow": {
-            "step_1": "Call GET /test/flows to see available test scenarios",
+            "step_0": "Create a session: POST /sessions",
+            "step_1": "Call GET /test/flows to see available test scenarios (requires X-Session-ID header)",
             "step_2": "Pick a test flow and ask Claude to perform the action described in 'claude_instruction'",
-            "step_3": "Call GET /test/validate/{flow_id} to check if Claude performed the action correctly",
-            "step_4": "Call POST /test/reset to restore the database for the next test",
-            "step_5": "Repeat with different test flows",
+            "step_3": "Call GET /test/validate/{flow_id} to check if Claude performed the action correctly (requires X-Session-ID header)",
+            "step_4": "Call POST /test/reset to restore the database for the next test (requires X-Session-ID header)",
+            "step_5": "Repeat with different test flows using the same session",
+        },
+        "session_requirements": {
+            "all_endpoints": "All testing endpoints (except /test/flows and /test/help) require X-Session-ID header",
+            "session_creation": "Create session with POST /sessions first",
+            "header_format": "X-Session-ID: {your_session_id}",
+            "isolation": "Each session has completely isolated test data",
         },
         "available_endpoints": {
-            "GET /test/flows": "List all available test flows",
-            "GET /test/flows/{flow_id}": "Get details about a specific test flow",
-            "GET /test/validate/{flow_id}": "Validate a specific test flow execution",
-            "GET /test/validate/all": "Validate all test flows at once",
-            "POST /test/reset": "Reset database to original seed state",
-            "GET /test/state": "Get current database state summary",
-            "POST /test/backup": "Create a backup of current database",
-            "GET /test/help": "This help information",
+            "GET /test/flows": "List all available test flows (no session required)",
+            "GET /test/flows/{flow_id}": "Get details about a specific test flow (no session required)",
+            "GET /test/validate/{flow_id}": "Validate a specific test flow execution (requires X-Session-ID header)",
+            "GET /test/validate/all": "Validate all test flows at once (requires X-Session-ID header)",
+            "POST /test/reset": "Reset database to original seed state (requires X-Session-ID header)",
+            "GET /test/state": "Get current database state summary (requires X-Session-ID header)",
+            "POST /test/backup": "Create a backup of current database (no session required)",
+            "GET /test/help": "This help information (no session required)",
         },
         "example_usage": {
-            "description": "Example workflow for testing",
+            "description": "Example workflow for testing with sessions",
             "steps": [
+                "0. POST /sessions - Create a session and get session_id",
                 "1. GET /test/flows - See that 'flow_1_create_laptop' is available",
                 "2. Ask Claude: 'Create a new laptop listing for SELLER001 with SKU TEST-LAPTOP-001, title Test Gaming Laptop, description High-performance gaming laptop for testing, price $999.99, quantity 50, status ACTIVE, and marketplace_ids [ATVPDKIKX0DER]'",
-                "3. GET /test/validate/flow_1_create_laptop - Check if Claude created the listing correctly",
-                "4. POST /test/reset - Reset database for next test",
+                "3. GET /test/validate/flow_1_create_laptop with X-Session-ID header - Check if Claude created the listing correctly",
+                "4. POST /test/reset with X-Session-ID header - Reset database for next test",
+                "5. Repeat steps 2-4 with different test flows using the same session",
             ],
         },
     }

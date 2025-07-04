@@ -69,11 +69,21 @@ async def list_tools() -> List[Tool]:
     """List available tools"""
     return [
         Tool(
+            name="create_session",
+            description="Create a new session and get session ID for subsequent requests",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        ),
+        Tool(
             name="get_listing_item",
-            description="Get details about a specific listing item by seller ID and SKU",
+            description="Get details about a specific listing item by seller ID and SKU (requires session_id)",
             inputSchema={
                 "type": "object",
                 "properties": {
+                    "session_id": {"type": "string", "description": "Session ID from create_session (required)"},
                     "seller_id": {"type": "string", "description": "The seller identifier (e.g., SELLER001)"},
                     "sku": {"type": "string", "description": "The SKU (Stock Keeping Unit) identifier"},
                     "marketplace_ids": {
@@ -82,15 +92,16 @@ async def list_tools() -> List[Tool]:
                         "description": "Optional list of marketplace IDs to filter by",
                     },
                 },
-                "required": ["seller_id", "sku"],
+                "required": ["session_id", "seller_id", "sku"],
             },
         ),
         Tool(
             name="create_or_update_listing",
-            description="Create a new listing or fully update an existing one",
+            description="Create a new listing or fully update an existing one (requires session_id)",
             inputSchema={
                 "type": "object",
                 "properties": {
+                    "session_id": {"type": "string", "description": "Session ID from create_session (required)"},
                     "seller_id": {"type": "string", "description": "The seller identifier"},
                     "sku": {"type": "string", "description": "The SKU identifier"},
                     "title": {"type": "string", "description": "Product title"},
@@ -104,15 +115,16 @@ async def list_tools() -> List[Tool]:
                         "description": "List of marketplace IDs",
                     },
                 },
-                "required": ["seller_id", "sku"],
+                "required": ["session_id", "seller_id", "sku"],
             },
         ),
         Tool(
             name="update_listing_partial",
-            description="Partially update an existing listing (only specified fields)",
+            description="Partially update an existing listing (only specified fields, requires session_id)",
             inputSchema={
                 "type": "object",
                 "properties": {
+                    "session_id": {"type": "string", "description": "Session ID from create_session (required)"},
                     "seller_id": {"type": "string", "description": "The seller identifier"},
                     "sku": {"type": "string", "description": "The SKU identifier"},
                     "title": {"type": "string", "description": "Product title"},
@@ -126,27 +138,29 @@ async def list_tools() -> List[Tool]:
                         "description": "List of marketplace IDs",
                     },
                 },
-                "required": ["seller_id", "sku"],
+                "required": ["session_id", "seller_id", "sku"],
             },
         ),
         Tool(
             name="delete_listing_item",
-            description="Delete a listing item (sets status to INACTIVE)",
+            description="Delete a listing item (sets status to INACTIVE, requires session_id)",
             inputSchema={
                 "type": "object",
                 "properties": {
+                    "session_id": {"type": "string", "description": "Session ID from create_session (required)"},
                     "seller_id": {"type": "string", "description": "The seller identifier"},
                     "sku": {"type": "string", "description": "The SKU identifier"},
                 },
-                "required": ["seller_id", "sku"],
+                "required": ["session_id", "seller_id", "sku"],
             },
         ),
         Tool(
             name="search_listings",
-            description="Search for listings with optional filters and text search",
+            description="Search for listings with optional filters and text search (requires session_id)",
             inputSchema={
                 "type": "object",
                 "properties": {
+                    "session_id": {"type": "string", "description": "Session ID from create_session (required)"},
                     "seller_id": {"type": "string", "description": "Filter by seller ID"},
                     "seller_name": {"type": "string", "description": "Search by seller name (partial match)"},
                     "title_search": {"type": "string", "description": "Search in product title and description"},
@@ -168,7 +182,7 @@ async def list_tools() -> List[Tool]:
                         "description": "Maximum number of items to return",
                     },
                 },
-                "required": [],
+                "required": ["session_id"],
             },
         ),
     ]
@@ -179,17 +193,36 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
     """Handle tool calls"""
 
     try:
-        if name == "get_listing_item":
+        if name == "create_session":
+            url = f"{FASTAPI_BASE_URL}/sessions"
+            response = await http_client.post(url)
+
+            if response.status_code == 200:
+                data = response.json()
+                session_id = data["session_id"]
+                return [
+                    TextContent(
+                        type="text",
+                        text=f"✅ **Session Created Successfully**\n\n**Session ID:** {session_id}\n\n**Important:** Use this session ID in all subsequent tool calls.\n\n**Message:** {data.get('message', '')}\n\n**Raw JSON:**\n```json\n{json.dumps(data, indent=2)}\n```",
+                    )
+                ]
+            else:
+                error_msg = await handle_http_error(response)
+                return [TextContent(type="text", text=f"❌ **Error creating session**\n\n{error_msg}")]
+
+        elif name == "get_listing_item":
+            session_id = arguments["session_id"]
             seller_id = arguments["seller_id"]
             sku = arguments["sku"]
             marketplace_ids = arguments.get("marketplace_ids")
 
             url = f"{FASTAPI_BASE_URL}/listings/2021-08-01/items/{seller_id}/{sku}"
+            headers = {"X-Session-ID": session_id}
             params = {}
             if marketplace_ids:
                 params["marketplace_ids"] = marketplace_ids
 
-            response = await http_client.get(url, params=params)
+            response = await http_client.get(url, headers=headers, params=params)
 
             if response.status_code == 200:
                 data = response.json()
@@ -211,6 +244,7 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                 return [TextContent(type="text", text=f"❌ **Error getting listing**\n\n{error_msg}")]
 
         elif name == "create_or_update_listing":
+            session_id = arguments["session_id"]
             seller_id = arguments["seller_id"]
             sku = arguments["sku"]
 
@@ -221,7 +255,8 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                     request_data[field] = arguments[field]
 
             url = f"{FASTAPI_BASE_URL}/listings/2021-08-01/items/{seller_id}/{sku}"
-            response = await http_client.put(url, json=request_data)
+            headers = {"X-Session-ID": session_id}
+            response = await http_client.put(url, headers=headers, json=request_data)
 
             if response.status_code == 200:
                 data = response.json()
@@ -236,6 +271,7 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                 return [TextContent(type="text", text=f"❌ **Error creating/updating listing**\n\n{error_msg}")]
 
         elif name == "update_listing_partial":
+            session_id = arguments["session_id"]
             seller_id = arguments["seller_id"]
             sku = arguments["sku"]
 
@@ -246,7 +282,8 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                     request_data[field] = arguments[field]
 
             url = f"{FASTAPI_BASE_URL}/listings/2021-08-01/items/{seller_id}/{sku}"
-            response = await http_client.patch(url, json=request_data)
+            headers = {"X-Session-ID": session_id}
+            response = await http_client.patch(url, headers=headers, json=request_data)
 
             if response.status_code == 200:
                 data = response.json()
@@ -261,11 +298,13 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                 return [TextContent(type="text", text=f"❌ **Error updating listing**\n\n{error_msg}")]
 
         elif name == "delete_listing_item":
+            session_id = arguments["session_id"]
             seller_id = arguments["seller_id"]
             sku = arguments["sku"]
 
             url = f"{FASTAPI_BASE_URL}/listings/2021-08-01/items/{seller_id}/{sku}"
-            response = await http_client.delete(url)
+            headers = {"X-Session-ID": session_id}
+            response = await http_client.delete(url, headers=headers)
 
             if response.status_code == 200:
                 data = response.json()
@@ -280,15 +319,25 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                 return [TextContent(type="text", text=f"❌ **Error deleting listing**\n\n{error_msg}")]
 
         elif name == "search_listings":
+            session_id = arguments["session_id"]
             url = f"{FASTAPI_BASE_URL}/listings/2021-08-01/items"
+            headers = {"X-Session-ID": session_id}
             params = {}
 
             # Add query parameters
-            for param in ["seller_id", "seller_name", "title_search", "marketplace_ids", "status", "skip", "limit"]:
+            for param in [
+                "seller_id",
+                "seller_name",
+                "title_search",
+                "marketplace_ids",
+                "status",
+                "skip",
+                "limit",
+            ]:
                 if param in arguments:
                     params[param] = arguments[param]
 
-            response = await http_client.get(url, params=params)
+            response = await http_client.get(url, headers=headers, params=params)
 
             if response.status_code == 200:
                 data = response.json()

@@ -16,8 +16,13 @@ from app.testing.test_flows import get_test_flow
 class TestValidator:
     """Validates test flow results against expected outcomes"""
 
-    def __init__(self):
-        self.db = SessionLocal()
+    def __init__(self, session_id: Optional[str] = None):
+        if session_id:
+            from app.session_manager import session_manager
+
+            self.db = session_manager.get_session_db(session_id)
+        else:
+            self.db = SessionLocal()
 
     def __del__(self):
         if hasattr(self, "db"):
@@ -361,7 +366,7 @@ class TestValidator:
         }
 
 
-def validate_flow(flow_id: str) -> Dict[str, Any]:
+def validate_flow(flow_id: str, session_id: Optional[str] = None) -> Dict[str, Any]:
     """Convenience function to validate a test flow"""
-    validator = TestValidator()
+    validator = TestValidator(session_id)
     return validator.validate_test_flow(flow_id)

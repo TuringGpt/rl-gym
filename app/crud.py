@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
-from app.models import ListingItem
-from app.schemas import ListingItemCreate, ListingItemUpdate
+from .models import ListingItem
+from .schemas import ListingItemCreate, ListingItemUpdate
 from typing import List, Optional
 import json
 

@@ -2,6 +2,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Text, DECIMAL, TI
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
+from typing import Optional
 import json
 
 # SQLite database URL
@@ -24,3 +25,26 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+# Session-aware database dependency
+def get_session_db(session_id: Optional[str] = None):
+    """
+    Get database session for a specific session ID
+    If no session_id provided, uses default database
+    """
+    if session_id:
+        from app.session_manager import session_manager
+
+        db = session_manager.get_session_db(session_id)
+        try:
+            yield db
+        finally:
+            db.close()
+    else:
+        # Use default database
+        db = SessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
